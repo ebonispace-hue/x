@@ -1,138 +1,311 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Dashboard Rental PS</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root{--primary:#4f46e5;--bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#64748b;--danger:#dc2626;--ok:#16a34a}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px Arial,sans-serif}.wrap{max-width:1180px;margin:auto;padding:28px 18px}.card{background:var(--card);border-radius:16px;box-shadow:0 6px 20px #16213a14;padding:22px}.hide{display:none}.login{min-height:100vh;display:grid;place-items:center;background:#0f172a;padding:20px}.login .card{width:min(420px,100%);background:#17233a;color:#fff}.brand{font-weight:800;font-size:21px}.muted{color:var(--muted)}.login .muted{color:#c7d2e3}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:20px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}.stat{border-radius:14px;padding:18px;color:#fff}.stat small{opacity:.85}.stat strong{display:block;font-size:24px;margin-top:6px}.a{background:var(--primary)}.b{background:var(--ok)}.c{background:#1e293b}.grid{display:grid;grid-template-columns:360px 1fr;gap:20px}label{display:block;font-size:13px;font-weight:bold;margin:14px 0 6px}input,select,button{font:inherit}input,select{width:100%;border:1px solid #d5dce8;border-radius:9px;padding:11px;background:#fff}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.readonly{background:#eef2f7;font-weight:bold}button{border:0;border-radius:9px;padding:11px 14px;font-weight:bold;cursor:pointer}.primary{background:var(--primary);color:#fff}.secondary{background:#e9edf5;color:#25324a}.danger{color:var(--danger);background:#fff0f1}.outline{border:1px solid #d5dce8;background:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.status{min-height:20px;margin:13px 0 0;color:var(--muted)}.err{color:var(--danger)}.ok{color:var(--ok)}.tablewrap{overflow:auto;padding:0}.tablehead{padding:20px 22px 10px}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;padding:13px 16px;border-top:1px solid #e9edf4}th{color:var(--muted);font-size:12px}td strong{display:block}.badge{display:inline-block;background:#e8ebff;color:#3931a5;border-radius:99px;padding:5px 9px;font-size:12px}.thumb{width:48px;height:48px;object-fit:cover;border-radius:8px;cursor:pointer}.modal{position:fixed;inset:0;background:#0009;display:grid;place-items:center;padding:18px;z-index:9}.modalbox{background:#fff;border-radius:14px;max-width:700px;width:100%;padding:15px}.modalbox img{width:100%;max-height:75vh;object-fit:contain}.modaltop{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}@media(max-width:800px){.stats,.grid{grid-template-columns:1fr}.top{align-items:flex-start}.top h1{font-size:22px;margin:0}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PS Rental Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root { --primary: #4f46e5; --bg: #f8fafc; --card: #ffffff; }
+        body { background-color: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; }
+        .card { border: none; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .btn-modern { border-radius: 8px; font-weight: 600; }
+        .badge-ps { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; }
+        #loginOverlay { position: fixed; top:0; left:0; width: 100%; height: 100%; background: #0f172a; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .glass-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .readonly-field { background-color: #e9ecef !important; cursor: not-allowed; font-weight: bold; }
+        .thumb-img { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #dee2e6; }
+    </style>
 </head>
 <body>
-  <section id="loginView" class="login">
-    <div class="card">
-      <div class="brand">🎮 Dashboard Rental PS</div>
-      <p class="muted">Masuk menggunakan akun Supabase Anda.</p>
-      <form id="loginForm">
-        <label>Email</label><input id="email" type="email" placeholder="admin@contoh.com" required>
-        <label>Password</label><input id="password" type="password" minlength="6" required>
-        <div class="actions"><button class="primary" type="submit">Masuk Panel</button></div>
-        <p id="loginStatus" class="status"></p>
-      </form>
-    </div>
-  </section>
 
-  <main id="appView" class="wrap hide">
-    <header class="top">
-      <div><div class="brand">🎮 Dashboard Rental PS</div><p id="welcome" class="muted"></p></div>
-      <button id="logout" class="outline">Logout</button>
-    </header>
-    <section class="stats">
-      <div class="stat a"><small>Omset PS A + C</small><strong id="omsetAC">Rp 0</strong></div>
-      <div class="stat b"><small>Omset PS B</small><strong id="omsetB">Rp 0</strong></div>
-      <div class="stat c"><small>Total Omset</small><strong id="omsetTotal">Rp 0</strong></div>
-    </section>
-    <section class="grid">
-      <div class="card">
-        <h2 id="formTitle" style="margin-top:0;font-size:18px">Tambah Transaksi</h2>
-        <form id="transactionForm">
-          <input id="editId" type="hidden">
-          <label>Unit PS</label><input id="unit" class="readonly" readonly>
-          <label>Nomor Penyewa</label><input id="penyewa" placeholder="08..." required>
-          <div class="row"><div><label>Tipe Sewa</label><select id="tipe"><option>Jam</option><option>Hari</option></select></div><div><label>Durasi</label><input id="durasi" type="number" min="1" value="1" required></div></div>
-          <label>Tambahan TV</label><select id="tv"><option value="Ya">Ya (+TV)</option><option value="Tidak">Tidak</option></select>
-          <label>Nominal (Rp)</label><input id="nominal" type="number" min="0" placeholder="50000" required>
-          <label>Foto bukti <span id="photoRequired">*</span></label><input id="foto" type="file" accept="image/jpeg,image/png,image/webp" required>
-          <div class="actions"><button id="saveButton" class="primary" type="submit">Simpan</button><button id="cancelEdit" class="secondary hide" type="button">Batal</button></div>
-          <p id="formStatus" class="status"></p>
+<!-- Overlay Login -->
+<div id="loginOverlay">
+    <div class="card glass-card text-white p-4" style="max-width: 400px; width: 90%;">
+        <div class="text-center mb-4">
+            <i class="bi bi-display display-5 text-primary"></i>
+            <h4 class="mt-3 fw-bold">Admin Login</h4>
+        </div>
+        <form id="loginForm">
+            <div class="mb-3">
+                <label class="form-label text-white-50">Username</label>
+                <input type="text" id="loginUser" class="form-control bg-dark text-white border-0" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white-50">PIN</label>
+                <input type="password" id="loginPin" class="form-control bg-dark text-white border-0" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 btn-modern py-2">Masuk Panel</button>
         </form>
-      </div>
-      <div class="card tablewrap">
-        <div class="tablehead"><h2 style="margin:0;font-size:18px">Transaksi tersimpan</h2></div>
-        <table><thead><tr><th>PS</th><th>Penyewa</th><th>TV</th><th>Foto</th><th>Biaya</th><th>Aksi</th></tr></thead><tbody id="transactionTable"></tbody></table>
-      </div>
-    </section>
-  </main>
+    </div>
+</div>
 
-  <div id="photoModal" class="modal hide"><div class="modalbox"><div class="modaltop"><strong>Bukti Transaksi</strong><button id="closeModal" class="secondary">Tutup</button></div><img id="modalImg" alt="Bukti transaksi"></div></div>
+<!-- Main App -->
+<div id="appContent" class="container py-5 d-none">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Dashboard Rental PS</h3>
+            <p class="text-muted small" id="welcomeText"></p>
+        </div>
+        <button class="btn btn-outline-danger btn-sm" onclick="logout()"><i class="bi bi-power"></i> Logout</button>
+    </div>
 
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="card p-3 bg-primary text-white text-center"><small>Omset (PS A + C)</small><h4 class="fw-bold mb-0" id="omsetAC">Rp 0</h4></div></div>
+        <div class="col-md-4"><div class="card p-3 bg-success text-white text-center"><small>Omset (PS B)</small><h4 class="fw-bold mb-0" id="omsetB">Rp 0</h4></div></div>
+        <div class="col-md-4"><div class="card p-3 bg-dark text-white text-center"><small>Total Omset</small><h4 class="fw-bold mb-0" id="omsetTotal">Rp 0</h4></div></div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Form -->
+        <div class="col-lg-4">
+            <div class="card p-4">
+                <h5 class="fw-bold mb-3" id="formTitle">Tambah Transaksi</h5>
+                <form id="psForm">
+                    <input type="hidden" id="editId">
+                    <div class="mb-3">
+                        <label class="small fw-bold">Unit PS (Otomatis)</label>
+                        <input type="text" id="unitPs" class="form-control readonly-field" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold">Nomor Penyewa</label>
+                        <input type="text" id="noPenyewa" class="form-control" placeholder="08..." required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="small fw-bold">Tipe Sewa</label>
+                            <select id="tipeSewa" class="form-select"><option>Jam</option><option>Hari</option></select>
+                        </div>
+                        <div class="col-6">
+                            <label class="small fw-bold">Durasi</label>
+                            <input type="number" id="durasi" class="form-control" placeholder="1" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold">Tambahan TV</label>
+                        <select id="isTv" class="form-select"><option value="Ya">Ya (+TV)</option><option value="Tidak">Tidak</option></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold">Nominal (Rp)</label>
+                        <input type="number" id="nominal" class="form-control" placeholder="50000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold">Upload Foto Bukti <span class="text-danger">*</span></label>
+                        <input type="file" id="fotoBukti" class="form-control" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-modern" id="btnSubmit">Simpan</button>
+                    <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="btnCancelEdit" onclick="resetForm()">Batal</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabel -->
+        <div class="col-lg-8">
+            <div class="card p-0 overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>PS</th>
+                                <th>Penyewa</th>
+                                <th>TV</th>
+                                <th>Foto</th>
+                                <th>Biaya</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pratinjau Foto -->
+<div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Bukti Transaksi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-2">
+                <img id="modalImg" src="" class="img-fluid rounded" style="max-height: 80vh;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // GANTI dua nilai ini dengan Project URL dan anon public key dari Supabase: Settings > API.
-  const SUPABASE_URL = 'PASTE_SUPABASE_PROJECT_URL_DI_SINI';
-  const SUPABASE_ANON_KEY = 'PASTE_SUPABASE_ANON_KEY_DI_SINI';
-  const BUCKET = 'bukti-transaksi';
-  const units = ['PS A','PS B','PS C'];
+    const ACCOUNTS = { 
+        master: { pin: "171717", role: "Master Admin" }, 
+        adan: { pin: "888999", role: "Kasir (Adan)" } 
+    };
 
-  let sb = null, currentUser = null, profile = null, transactions = [], photoUrls = {};
-  const $ = id => document.getElementById(id);
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
-  const rupiah = value => 'Rp ' + Number(value || 0).toLocaleString('id-ID');
+    let currentUser = JSON.parse(sessionStorage.getItem('ps_session')) || null;
+    let transactions = JSON.parse(localStorage.getItem('ps_transactions')) || [];
+    let lastUnitIndex = parseInt(localStorage.getItem('ps_last_unit_index')) || -1;
+    const units = ['PS A', 'PS B', 'PS C'];
 
-  function setupClient(){
-    if(SUPABASE_URL.includes('PASTE_') || SUPABASE_ANON_KEY.includes('PASTE_')){
-      $('loginStatus').className='status err';
-      $('loginStatus').textContent='Masukkan Supabase Project URL dan anon public key pada bagian konfigurasi file ini.';
-      return false;
+    document.addEventListener('DOMContentLoaded', () => { if(currentUser) showApp(); });
+
+    function canModify() {
+        return currentUser && currentUser.username === 'master';
     }
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    return true;
-  }
 
-  async function boot(){
-    if(!setupClient()) return;
-    const result = await sb.auth.getSession();
-    if(result.data.session) await openApp(result.data.session.user);
-  }
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const u = document.getElementById('loginUser').value.toLowerCase();
+        const p = document.getElementById('loginPin').value;
+        if(ACCOUNTS[u] && ACCOUNTS[u].pin === p) {
+            currentUser = { username: u, role: ACCOUNTS[u].role };
+            sessionStorage.setItem('ps_session', JSON.stringify(currentUser));
+            showApp();
+        } else { alert("Username atau PIN salah!"); }
+    });
 
-  async function openApp(user){
-    currentUser = user;
-    const profileResult = await sb.from('profiles').select('*').eq('id', user.id).single();
-    if(profileResult.error){
-      await sb.auth.signOut();
-      $('loginStatus').className='status err';
-      $('loginStatus').textContent='Akun belum memiliki profil/role. Tambahkan akun ke tabel profiles sesuai petunjuk SQL.';
-      return;
+    function showApp() {
+        document.getElementById('loginOverlay').classList.add('d-none');
+        document.getElementById('appContent').classList.remove('d-none');
+        document.getElementById('welcomeText').innerText = "Logged in as " + currentUser.role;
+        updateQueueDisplay();
+        renderTable();
+        calculateOmset();
     }
-    profile = profileResult.data;
-    $('loginView').classList.add('hide');
-    $('appView').classList.remove('hide');
-    $('welcome').textContent = profile.full_name + ' — ' + (profile.role === 'master' ? 'Master Admin' : 'Kasir');
-    await loadTransactions();
-    resetForm();
-  }
 
-  async function loadTransactions(){
-    const result = await sb.from('transactions').select('*').order('created_at',{ascending:false});
-    if(result.error){ showFormError(result.error.message); return; }
-    transactions = result.data || [];
-    photoUrls = {};
-    await Promise.all(transactions.map(async t => {
-      const signed = await sb.storage.from(BUCKET).createSignedUrl(t.foto_path, 3600);
-      if(!signed.error) photoUrls[t.id] = signed.data.signedUrl;
-    }));
-    render();
-  }
+    function logout() { sessionStorage.removeItem('ps_session'); location.reload(); }
 
-  function nextUnit(){
-    if(!transactions.length) return units[0];
-    const last = transactions[0].unit;
-    return units[(units.indexOf(last)+1) % units.length];
-  }
+    function updateQueueDisplay() {
+        let nextUnit = units[(lastUnitIndex + 1) % 3];
+        document.getElementById('unitPs').value = nextUnit;
+    }
 
-  function render(){
-    let ac=0, b=0;
-    transactions.forEach(t => { if(t.unit==='PS B') b+=Number(t.nominal); else ac+=Number(t.nominal); });
-    $('omsetAC').textContent=rupiah(ac); $('omsetB').textContent=rupiah(b); $('omsetTotal').textContent=rupiah(ac+b);
-    const master = profile.role === 'master';
-    $('transactionTable').innerHTML = transactions.length ? transactions.map(t => `
-      <tr><td><span class="badge">${esc(t.unit)}</span></td><td><strong>${esc(t.penyewa)}</strong><small class="muted">${esc(t.durasi)} ${esc(t.tipe)}</small></td><td>${t.tv==='Ya'?'Ya':'Tidak'}</td><td>${photoUrls[t.id] ? `<img class="thumb" data-photo="${t.id}" src="${photoUrls[t.id]}" alt="Bukti">` : '-'}</td><td><strong>${rupiah(t.nominal)}</strong></td><td>${master ? `<button class="secondary" data-edit="${t.id}">Edit</button> <button class="danger" data-delete="${t.id}">Hapus</button>` : '<small class="muted">Hanya lihat</small>'}</td></tr>`).join('') : '<tr><td colspan="6" class="muted">Belum ada transaksi.</td></tr>';
-    document.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>showPhoto(b.dataset.photo));
-    document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>startEdit(b.dataset.edit));
-    document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>removeTransaction(b.dataset.delete));
-  }
+    // Helper konversi file ke Base64 string
+    function getBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
 
-  function resetForm(){
-    $('transactionForm').reset(); $('editId').value=''; $('unit').value=nextUnit(); $('durasi').value=1;
-    $('foto').required=true; $('photoRequired').classList.remove('hide'); $('formTitle').textContent='Tambah Transaksi'; $('saveButton').textContent='Simpan'; $('cancelEdit').classList.add('hide'); $(
+    document.getElementById('psForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const editId = document.getElementById('editId').value;
+        const fileInput = document.getElementById('fotoBukti');
+
+        let fotoData = '';
+        if (fileInput.files.length > 0) {
+            fotoData = await getBase64(fileInput.files[0]);
+        } else if (editId) {
+            const existing = transactions.find(t => t.id == editId);
+            fotoData = existing ? existing.foto : '';
+        } else {
+            alert('Foto wajib diunggah!');
+            return;
+        }
+
+        const data = {
+            id: editId ? parseInt(editId) : Date.now(),
+            unit: document.getElementById('unitPs').value,
+            penyewa: document.getElementById('noPenyewa').value,
+            tipe: document.getElementById('tipeSewa').value,
+            durasi: document.getElementById('durasi').value,
+            tv: document.getElementById('isTv').value,
+            nominal: parseInt(document.getElementById('nominal').value),
+            foto: fotoData
+        };
+
+        if (editId) {
+            if (!canModify()) { alert("Hanya Master yang bisa mengedit!"); return; }
+            transactions = transactions.map(t => t.id == editId ? data : t);
+        } else {
+            transactions.unshift(data);
+            lastUnitIndex = units.indexOf(data.unit);
+            localStorage.setItem('ps_last_unit_index', lastUnitIndex);
+        }
+        save();
+        resetForm();
+    });
+
+    function save() {
+        localStorage.setItem('ps_transactions', JSON.stringify(transactions));
+        renderTable();
+        calculateOmset();
+    }
+
+    function calculateOmset() {
+        let ac = 0, b = 0;
+        transactions.forEach(t => { if(t.unit == 'PS B') b += t.nominal; else ac += t.nominal; });
+        document.getElementById('omsetAC').innerText = 'Rp ' + ac.toLocaleString();
+        document.getElementById('omsetB').innerText = 'Rp ' + b.toLocaleString();
+        document.getElementById('omsetTotal').innerText = 'Rp ' + (ac+b).toLocaleString();
+    }
+
+    function renderTable() {
+        let tbody = document.getElementById('transactionTable');
+        const isMaster = canModify();
+        tbody.innerHTML = transactions.map(t => `
+            <tr>
+                <td><span class="badge bg-secondary badge-ps">${t.unit}</span></td>
+                <td>${t.penyewa}<br><small class="text-muted">${t.durasi} ${t.tipe}</small></td>
+                <td>${t.tv === 'Ya' ? '<span class="text-success"><i class="bi bi-tv"></i></span>' : '<span class="text-danger"><i class="bi bi-x-circle"></i></span>'}</td>
+                <td>
+                    ${t.foto ? `<img src="${t.foto}" class="thumb-img" onclick="showPhotoModal('${t.foto}')" alt="Bukti">` : '-'}
+                </td>
+                <td class="fw-bold">Rp ${t.nominal.toLocaleString()}</td>
+                <td class="text-end">
+                    ${isMaster ? `
+                        <button class="btn btn-sm btn-light" onclick="edit(${t.id})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-light text-danger" onclick="del(${t.id})"><i class="bi bi-trash"></i></button>
+                    ` : '<span class="text-muted small">No Access</span>'}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function showPhotoModal(src) {
+        document.getElementById('modalImg').src = src;
+        let photoModal = new bootstrap.Modal(document.getElementById('photoModal'));
+        photoModal.show();
+    }
+
+    function edit(id) {
+        if (!canModify()) return;
+        let t = transactions.find(x => x.id == id);
+        document.getElementById('editId').value = t.id;
+        document.getElementById('unitPs').value = t.unit;
+        document.getElementById('noPenyewa').value = t.penyewa;
+        document.getElementById('tipeSewa').value = t.tipe;
+        document.getElementById('durasi').value = t.durasi;
+        document.getElementById('isTv').value = t.tv;
+        document.getElementById('nominal').value = t.nominal;
+        
+        // Foto tidak wajib diisi saat edit jika tidak ingin mengganti
+        document.getElementById('fotoBukti').removeAttribute('required');
+        document.getElementById('btnSubmit').innerText = "Update";
+        document.getElementById('btnCancelEdit').classList.remove('d-none');
+    }
+
+    function del(id) { 
+        if (!canModify()) return;
+        if(confirm('Hapus transaksi ini?')) { transactions = transactions.filter(x => x.id != id); save(); } 
+    }
+    
+    function resetForm() { 
+        document.getElementById('psForm').reset(); 
+        document.getElementById('editId').value = ''; 
+        document.getElementById('fotoBukti').setAttribute('required', 'required');
+        document.getElementById('btnSubmit').innerText = "Simpan"; 
+        document.getElementById('btnCancelEdit').classList.add('d-none'); 
+        updateQueueDisplay(); 
+    }
+</script>
+</body>
+</html>
