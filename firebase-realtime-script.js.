@@ -1,0 +1,430 @@
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
+import {
+  getDatabase, ref, onValue, push, set, remove, get, runTransaction
+} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js';
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject
+} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js';
+
+const firebaseConfig = {
+  apiKey: "GANTI_API_KEY",
+  authDomain: "GANTI_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://GANTI_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId: "GANTI_PROJECT_ID",
+  storageBucket: "GANTI_PROJECT_ID.firebasestorage.app",
+  messagingSenderId: "GANTI_SENDER_ID",
+  appId: "GANTI_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const storage = getStorage(app);
+
+const units = ['PS A', 'PS B', 'PS C'];
+
+let currentUser = null;
+let transactions = [];
+let unsubscribeTransactions = null;
+
+const $ = (id) => document.getElementById(id);
+const rupiah = (angka) => `Rp ${Number(angka || 0).toLocaleString('id-ID')}`;
+
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>'"]/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[char]));
+}
+
+function isMaster() {
+  return currentUser?.role === 'master';
+}
+
+async function loadProfile(user) {
+  const snapshot = await get(ref(db, `users/${user.uid}`));
+
+  if (!snapshot.exists()) {
+    throw new Error('Akun belum diberi role oleh admin.');
+  }
+
+  const profile = snapshot.val();
+
+  if (!['master', 'cashier'].includes(profile.role)) {
+    throw new Error('Role akun tidak valid.');
+  }
+
+  return profile;
+}
+
+function showLogin() {
+  currentUser = null;
+
+  $('loginOverlay').classList.remove('d-none');
+  $('appContent').classList.add('d-none');
+
+  if (unsubscribeTransactions) {
+    unsubscribeTransactions();
+    unsubscribeTransactions = null;
+  }
+}
+
+function showApp() {
+  $('loginOverlay').classList.add('d-none');
+  $('appContent').classList.remove('d-none');
+
+  $('welcomeText').textContent =
+    `Logged in as ${currentUser.name || currentUser.role}`;
+
+  subscribeTransactions();
+  resetForm();
+}
+
+$('loginForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const email = $('loginUser').value.trim();
+  const password = $('loginPin').value;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    alert('Login gagal. Periksa email dan password.');
+  }
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    showLogin();
+    return;
+  }
+
+  try {
+    const profile = await loadProfile(user);
+
+    currentUser = {
+      uid: user.uid,
+      email: user.email,
+      ...profile
+    };
+
+    showApp();
+  } catch (error) {
+    alert(error.message);
+    await signOut(auth);
+  }
+});
+
+function subscribeTransactions() {
+  if (unsubscribeTransactions) unsubscribeTransactions();
+
+  unsubscribeTransactions = onValue(
+    ref(db, 'transactions'),
+    (snapshot) => {
+      const data = snapshot.val() || {};
+
+      transactions = Object.entries(data)
+        .map(([id, transaction]) => ({
+          id,
+          ...transaction
+        }))
+        .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+
+      renderTable();
+      calculateOmset();
+    },
+    (error) => {
+      alert(`Gagal membaca database: ${error.message}`);
+    }
+  );
+}
+
+async function updateQueueDisplay() {
+  const snapshot = await get(ref(db, 'meta/lastUnitIndex'));
+  const lastIndex = Number.isInteger(snapshot.val()) ? snapshot.val() : -1;
+
+  $('unitPs').value = units[(lastIndex + 1) % units.length];
+}
+
+async function reserveNextUnit() {
+  const queueRef = ref(db, 'meta/lastUnitIndex');
+
+  const result = await runTransaction(queueRef, (lastIndex) => {
+    const oldIndex = Number.isInteger(lastIndex) ? lastIndex : -1;
+    return (oldIndex + 1) % units.length;
+  });
+
+  if (!result.committed) {
+    throw new Error('Gagal mengambil antrean unit PS.');
+  }
+
+  return units[result.snapshot.val()];
+}
+
+$('psForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const editId = $('editId').value;
+  const selectedFile = $('fotoBukti').files[0];
+  const submitButton = $('btnSubmit');
+
+  submitButton.disabled = true;
+  submitButton.textContent = 'Menyimpan...';
+
+  try {
+    if (editId && !isMaster()) {
+      throw new Error('Hanya Master Admin yang dapat mengedit transaksi.');
+    }
+
+    const oldTransaction = editId
+      ? transactions.find((item) => item.id === editId)
+      : null;
+
+    const transactionId = editId || push(ref(db, 'transactions')).key;
+
+    let fotoUrl = oldTransaction?.fotoUrl || '';
+    let fotoPath = oldTransaction?.fotoPath || '';
+
+    if (selectedFile) {
+      if (!selectedFile.type.startsWith('image/')) {
+        throw new Error('Bukti transaksi harus berupa file gambar.');
+      }
+
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        throw new Error('Ukuran foto maksimal 5 MB.');
+      }
+
+      const safeName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+      fotoPath = `proofs/${transactionId}/${Date.now()}_${safeName}`;
+
+      const imageRef = storageRef(storage, fotoPath);
+
+      await uploadBytes(imageRef, selectedFile, {
+        contentType: selectedFile.type
+      });
+
+      fotoUrl = await getDownloadURL(imageRef);
+
+      if (
+        oldTransaction?.fotoPath &&
+        oldTransaction.fotoPath !== fotoPath
+      ) {
+        deleteObject(storageRef(storage, oldTransaction.fotoPath))
+          .catch(() => {});
+      }
+    }
+
+    if (!fotoUrl) {
+      throw new Error('Foto bukti wajib diunggah.');
+    }
+
+    const unit = editId
+      ? oldTransaction.unit
+      : await reserveNextUnit();
+
+    const transactionData = {
+      unit,
+      penyewa: $('noPenyewa').value.trim(),
+      tipe: $('tipeSewa').value,
+      durasi: Number($('durasi').value),
+      tv: $('isTv').value,
+      nominal: Number($('nominal').value),
+      fotoUrl,
+      fotoPath,
+      createdBy: oldTransaction?.createdBy || currentUser.uid,
+      updatedBy: currentUser.uid,
+      createdAt: oldTransaction?.createdAt || Date.now(),
+      updatedAt: Date.now()
+    };
+
+    if (!transactionData.penyewa) {
+      throw new Error('Nomor penyewa wajib diisi.');
+    }
+
+    if (transactionData.durasi < 1) {
+      throw new Error('Durasi minimal adalah 1.');
+    }
+
+    if (transactionData.nominal < 0) {
+      throw new Error('Nominal tidak valid.');
+    }
+
+    await set(
+      ref(db, `transactions/${transactionId}`),
+      transactionData
+    );
+
+    resetForm();
+  } catch (error) {
+    alert(error.message || 'Gagal menyimpan transaksi.');
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = $('editId').value ? 'Update' : 'Simpan';
+  }
+});
+
+function calculateOmset() {
+  let ac = 0;
+  let b = 0;
+
+  transactions.forEach((transaction) => {
+    if (transaction.unit === 'PS B') {
+      b += Number(transaction.nominal || 0);
+    } else {
+      ac += Number(transaction.nominal || 0);
+    }
+  });
+
+  $('omsetAC').textContent = rupiah(ac);
+  $('omsetB').textContent = rupiah(b);
+  $('omsetTotal').textContent = rupiah(ac + b);
+}
+
+function renderTable() {
+  const canEdit = isMaster();
+
+  $('transactionTable').innerHTML = transactions.map((transaction) => `
+    <tr>
+      <td>
+        <span class="badge bg-secondary badge-ps">
+          ${escapeHtml(transaction.unit)}
+        </span>
+      </td>
+
+      <td>
+        ${escapeHtml(transaction.penyewa)}
+        <br>
+        <small class="text-muted">
+          ${escapeHtml(transaction.durasi)} ${escapeHtml(transaction.tipe)}
+        </small>
+      </td>
+
+      <td>
+        ${transaction.tv === 'Ya'
+          ? '<span class="text-success"><i class="bi bi-tv"></i></span>'
+          : '<span class="text-danger"><i class="bi bi-x-circle"></i></span>'
+        }
+      </td>
+
+      <td>
+        ${transaction.fotoUrl
+          ? `<img
+              src="${escapeHtml(transaction.fotoUrl)}"
+              class="thumb-img"
+              data-action="photo"
+              data-url="${escapeHtml(transaction.fotoUrl)}"
+              alt="Bukti transaksi"
+            >`
+          : '-'
+        }
+      </td>
+
+      <td class="fw-bold">${rupiah(transaction.nominal)}</td>
+
+      <td class="text-end">
+        ${canEdit
+          ? `
+            <button class="btn btn-sm btn-light"
+                    data-action="edit"
+                    data-id="${escapeHtml(transaction.id)}">
+              <i class="bi bi-pencil"></i>
+            </button>
+
+            <button class="btn btn-sm btn-light text-danger"
+                    data-action="delete"
+                    data-id="${escapeHtml(transaction.id)}">
+              <i class="bi bi-trash"></i>
+            </button>
+          `
+          : '<span class="text-muted small">No Access</span>'
+        }
+      </td>
+    </tr>
+  `).join('');
+}
+
+$('transactionTable').addEventListener('click', async (event) => {
+  const target = event.target.closest('[data-action]');
+
+  if (!target) return;
+
+  if (target.dataset.action === 'photo') {
+    $('modalImg').src = target.dataset.url;
+
+    new bootstrap.Modal($('photoModal')).show();
+  }
+
+  if (target.dataset.action === 'edit') {
+    editTransaction(target.dataset.id);
+  }
+
+  if (target.dataset.action === 'delete') {
+    await deleteTransaction(target.dataset.id);
+  }
+});
+
+function editTransaction(id) {
+  if (!isMaster()) return;
+
+  const transaction = transactions.find((item) => item.id === id);
+
+  if (!transaction) return;
+
+  $('editId').value = transaction.id;
+  $('unitPs').value = transaction.unit;
+  $('noPenyewa').value = transaction.penyewa;
+  $('tipeSewa').value = transaction.tipe;
+  $('durasi').value = transaction.durasi;
+  $('isTv').value = transaction.tv;
+  $('nominal').value = transaction.nominal;
+
+  $('fotoBukti').removeAttribute('required');
+  $('btnSubmit').textContent = 'Update';
+  $('btnCancelEdit').classList.remove('d-none');
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+async function deleteTransaction(id) {
+  if (!isMaster()) return;
+
+  if (!confirm('Hapus transaksi ini?')) return;
+
+  const transaction = transactions.find((item) => item.id === id);
+
+  try {
+    await remove(ref(db, `transactions/${id}`));
+
+    if (transaction?.fotoPath) {
+      deleteObject(storageRef(storage, transaction.fotoPath))
+        .catch(() => {});
+    }
+  } catch (error) {
+    alert(`Gagal menghapus transaksi: ${error.message}`);
+  }
+}
+
+function resetForm() {
+  $('psForm').reset();
+  $('editId').value = '';
+
+  $('fotoBukti').setAttribute('required', 'required');
+
+  $('btnSubmit').textContent = 'Simpan';
+  $('btnCancelEdit').classList.add('d-none');
+
+  updateQueueDisplay().catch(() => {});
+}
+
+window.logout = () => signOut(auth);
+window.resetForm = resetForm;
