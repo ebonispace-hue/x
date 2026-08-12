@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Omset Sewa PS</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" class="screen">
+    <div class="login-card">
+      <div class="logo">
+        <i class="fas fa-gamepad"></i>
+        <h1>Panel Omset PS</h1>
+        <p>Masukkan PIN untuk login</p>
+      </div>
+      <div class="pin-input-group">
+        <input type="password" id="pinInput" maxlength="6" placeholder="••••••" autocomplete="off">
+        <button id="loginBtn" class="btn-primary"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+      </div>
+      <p id="loginError" class="error-msg"></p>
+      <div class="login-hint">
+        <small>Admin / Master</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD SCREEN -->
+  <div id="dashboardScreen" class="screen hidden">
+    <header class="header">
+      <div class="header-left">
+        <i class="fas fa-gamepad"></i>
+        <span>Panel Omset Sewa PS</span>
+      </div>
+      <div class="header-right">
+        <span id="userRole" class="badge"></span>
+        <button id="logoutBtn" class="btn-icon" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- TOTALS -->
+      <section class="totals-section">
+        <div class="total-card card-a">
+          <div class="total-icon"><i class="fas fa-tv"></i></div>
+          <div class="total-info">
+            <span class="total-label">Omset PS A + C</span>
+            <span class="total-value" id="totalAC">Rp 0</span>
+          </div>
+        </div>
+        <div class="total-card card-b">
+          <div class="total-icon"><i class="fas fa-desktop"></i></div>
+          <div class="total-info">
+            <span class="total-label">Omset PS B</span>
+            <span class="total-value" id="totalB">Rp 0</span>
+          </div>
+        </div>
+        <div class="total-card card-all">
+          <div class="total-icon"><i class="fas fa-coins"></i></div>
+          <div class="total-info">
+            <span class="total-label">Total Omset Keseluruhan</span>
+            <span class="total-value" id="totalAll">Rp 0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FORM INPUT -->
+      <section class="form-section">
+        <h2><i class="fas fa-plus-circle"></i> Input Sewa Baru</h2>
+        <form id="rentalForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="nomorPenyewa">Nomor Penyewa</label>
+              <input type="text" id="nomorPenyewa" placeholder="Contoh: 08123456789" required>
+            </div>
+            <div class="form-group">
+              <label for="psUnit">Unit PS</label>
+              <select id="psUnit" required>
+                <option value="">-- Pilih Unit --</option>
+                <option value="A">PS A</option>
+                <option value="B">PS B</option>
+                <option value="C">PS C</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="durasi">Durasi</label>
+              <div class="durasi-row">
+                <input type="number" id="durasi" min="1" placeholder="1" required>
+                <select id="durasiUnit">
+                  <option value="jam">Jam</option>
+                  <option value="hari">Hari</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="nominal">Nominal (Rp)</label>
+              <input type="number" id="nominal" min="0" placeholder="50000" required>
+            </div>
+            <div class="form-group full-width">
+              <label for="foto">Foto Penyewa</label>
+              <div class="file-upload">
+                <input type="file" id="foto" accept="image/*" capture="environment">
+                <label for="foto" class="file-label">
+                  <i class="fas fa-camera"></i>
+                  <span id="fileName">Pilih / Ambil Foto</span>
+                </label>
+                <div id="previewContainer" class="preview-container hidden">
+                  <img id="fotoPreview" alt="Preview">
+                  <button type="button" id="removeFoto" class="btn-remove"><i class="fas fa-times"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary btn-submit" id="submitBtn">
+            <i class="fas fa-save"></i> Simpan Sewa
+          </button>
+        </form>
+      </section>
+
+      <!-- HISTORY -->
+      <section class="history-section">
+        <div class="history-grid">
+          <div class="history-card">
+            <h3><i class="fas fa-history"></i> History Terakhir</h3>
+            <div id="latestHistory" class="history-list">
+              <p class="empty">Belum ada data</p>
+            </div>
+          </div>
+          <div class="history-card">
+            <h3><i class="fas fa-trophy"></i> Penyewa Paling Banyak</h3>
+            <div id="topPenyewa" class="history-list">
+              <p class="empty">Belum ada data</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- EDIT MODAL (Master only) -->
+  <div id="editModal" class="modal hidden">
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fas fa-edit"></i> Edit Transaksi</h3>
+        <button type="button" id="closeModal" class="btn-icon"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="editForm">
+        <input type="hidden" id="editId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="editNomor">Nomor Penyewa</label>
+            <input type="text" id="editNomor" required>
+          </div>
+          <div class="form-group">
+            <label for="editPsUnit">Unit PS</label>
+            <select id="editPsUnit" required>
+              <option value="A">PS A</option>
+              <option value="B">PS B</option>
+              <option value="C">PS C</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editDurasi">Durasi</label>
+            <div class="durasi-row">
+              <input type="number" id="editDurasi" min="1" required>
+              <select id="editDurasiUnit">
+                <option value="jam">Jam</option>
+                <option value="hari">Hari</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="editNominal">Nominal (Rp)</label>
+            <input type="number" id="editNominal" min="0" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Foto Penyewa (opsional ganti)</label>
+            <div class="file-upload">
+              <input type="file" id="editFoto" accept="image/*">
+              <label for="editFoto" class="file-label">
+                <i class="fas fa-camera"></i>
+                <span id="editFileName">Ganti Foto (opsional)</span>
+              </label>
+              <div id="editPreviewContainer" class="preview-container">
+                <img id="editFotoPreview" alt="Preview">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="cancelEdit" class="btn-secondary">Batal</button>
+          <button type="submit" class="btn-primary" id="saveEditBtn">
+            <i class="fas fa-save"></i> Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
