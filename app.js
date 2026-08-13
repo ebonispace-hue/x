@@ -15,15 +15,31 @@ const firebaseConfig = {
 
 let db = null;
 let firebaseReady = false;
+let firebaseErrorMsg = "";
 
-try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
-  firebaseReady = true;
-  console.log("Firebase Realtime Database siap");
-} catch (err) {
-  console.error("Firebase error:", err);
+function initFirebase() {
+  try {
+    if (typeof firebase === "undefined") {
+      firebaseErrorMsg = "Library Firebase belum termuat. Cek koneksi internet.";
+      console.error(firebaseErrorMsg);
+      return false;
+    }
+    if (!firebase.apps || !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.database();
+    firebaseReady = true;
+    console.log("Firebase Realtime Database SIAP");
+    return true;
+  } catch (err) {
+    firebaseErrorMsg = err.message || String(err);
+    console.error("Firebase init error:", err);
+    firebaseReady = false;
+    return false;
+  }
 }
+
+initFirebase();
 
 const USERS = {
   "888999": { role: "Admin" },
@@ -109,10 +125,20 @@ function showDashboard() {
   loginScreen.classList.add("hidden");
   dashboardScreen.classList.remove("hidden");
   userRole.textContent = currentUser.role;
+
+  if (!firebaseReady) {
+    initFirebase();
+  }
+
   if (firebaseReady) {
     startRealtimeListener();
   } else {
-    document.getElementById("totalAll").textContent = "Cek Firebase";
+    document.getElementById("totalAC").textContent = "-";
+    document.getElementById("totalB").textContent = "-";
+    document.getElementById("totalAll").textContent = "Firebase Error";
+    document.getElementById("latestHistory").innerHTML =
+      '<p class="empty">Firebase belum siap.<br><small>' + (firebaseErrorMsg || "Cek Console F12") + '</small></p>';
+    document.getElementById("topPenyewa").innerHTML = '<p class="empty">-</p>';
   }
 }
 
@@ -152,8 +178,12 @@ removeFoto.addEventListener("click", function() {
 
 rentalForm.addEventListener("submit", function(e) {
   e.preventDefault();
+
   if (!firebaseReady) {
-    alert("Firebase belum siap");
+    initFirebase();
+  }
+  if (!firebaseReady) {
+    alert("Firebase belum siap.\n\n" + (firebaseErrorMsg || "Buka Console browser (F12) untuk lihat error."));
     return;
   }
 
@@ -193,7 +223,7 @@ rentalForm.addEventListener("submit", function(e) {
       alert("Sewa berhasil disimpan!");
     }).catch(function(err) {
       console.error(err);
-      alert("Gagal: " + err.message);
+      alert("Gagal simpan: " + err.message + "\n\nCek Rules Realtime Database sudah Publish?");
     }).finally(function() {
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Sewa';
@@ -212,6 +242,7 @@ rentalForm.addEventListener("submit", function(e) {
 });
 
 function startRealtimeListener() {
+  if (!db) return;
   db.ref("rentals").orderByChild("createdAt").on("value", function(snapshot) {
     const rentals = [];
     snapshot.forEach(function(child) {
@@ -225,6 +256,8 @@ function startRealtimeListener() {
   }, function(error) {
     console.error("Listener error:", error);
     document.getElementById("totalAll").textContent = "Error Rules";
+    document.getElementById("latestHistory").innerHTML =
+      '<p class="empty">Error: ' + error.message + '<br>Cek Rules sudah Publish?</p>';
   });
 }
 
