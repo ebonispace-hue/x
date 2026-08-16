@@ -1,5 +1,6 @@
 // =====================================================
-// PANEL OMSET SEWA PS - Realtime Database Version
+//  PANEL OMSET SEWA PS - Realtime Database Version
+//  Login: Admin 888999 | Master 171717
 // =====================================================
 
 const firebaseConfig = {
@@ -36,7 +37,6 @@ function initFirebase() {
   } catch (err) {
     firebaseErrorMsg = err.message || String(err);
     console.error("Firebase init error:", err);
-
     firebaseReady = false;
     return false;
   }
@@ -75,11 +75,6 @@ const cancelEdit = document.getElementById("cancelEdit");
 const modalOverlay = document.getElementById("modalOverlay");
 const saveEditBtn = document.getElementById("saveEditBtn");
 
-const editFotoInput = document.getElementById("editFoto");
-const editFileName = document.getElementById("editFileName");
-const editPreviewContainer = document.getElementById("editPreviewContainer");
-const editFotoPreview = document.getElementById("editFotoPreview");
-
 function formatRp(num) {
   return "Rp " + Number(num || 0).toLocaleString("id-ID");
 }
@@ -112,18 +107,18 @@ function checkSession() {
   const saved = sessionStorage.getItem("ps_user");
 
   if (saved) {
-    currentUser = JSON.parse(saved);
-    showDashboard();
+    try {
+      currentUser = JSON.parse(saved);
+      showDashboard();
+    } catch (err) {
+      sessionStorage.removeItem("ps_user");
+    }
   }
 }
 
-loginBtn.addEventListener("click", doLogin);
-
-pinInput.addEventListener("keypress", function(e) {
-  if (e.key === "Enter") {
-    doLogin();
-  }
-});
+// =====================================================
+// LOGIN
+// =====================================================
 
 function doLogin() {
   const pin = pinInput.value.trim();
@@ -145,6 +140,15 @@ function doLogin() {
 
   showDashboard();
 }
+
+loginBtn.addEventListener("click", doLogin);
+
+pinInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    doLogin();
+  }
+});
 
 function showDashboard() {
   loginScreen.classList.add("hidden");
@@ -187,7 +191,7 @@ logoutBtn.addEventListener("click", function() {
 });
 
 // =====================================================
-// FOTO INPUT BARU: GALERI / KAMERA / FILE MANAGER
+// FOTO GALERI / KAMERA
 // =====================================================
 
 function resetFotoInput() {
@@ -235,53 +239,6 @@ fotoInput.addEventListener("change", function(e) {
 
 removeFoto.addEventListener("click", function() {
   resetFotoInput();
-});
-
-// =====================================================
-// FOTO EDIT
-// =====================================================
-
-function resetEditFotoInput() {
-  editFotoInput.value = "";
-  editFotoPreview.src = "";
-  editFileName.textContent = "Ganti Foto dari Galeri / Kamera";
-  editPreviewContainer.classList.add("hidden");
-}
-
-editFotoInput.addEventListener("change", function(e) {
-  const file = e.target.files && e.target.files[0];
-
-  if (!file) {
-    return;
-  }
-
-  if (!file.type || !file.type.startsWith("image/")) {
-    alert("File yang dipilih harus berupa foto/gambar.");
-    resetEditFotoInput();
-    return;
-  }
-
-  if (file.size > 1.5 * 1024 * 1024) {
-    alert("Ukuran foto maksimal 1.5 MB. Silakan pilih foto lain.");
-    resetEditFotoInput();
-    return;
-  }
-
-  editFileName.textContent = file.name;
-
-  const reader = new FileReader();
-
-  reader.onload = function(ev) {
-    editFotoPreview.src = ev.target.result;
-    editPreviewContainer.classList.remove("hidden");
-  };
-
-  reader.onerror = function() {
-    alert("Foto gagal dibaca. Silakan pilih ulang.");
-    resetEditFotoInput();
-  };
-
-  reader.readAsDataURL(file);
 });
 
 // =====================================================
@@ -340,288 +297,7 @@ rentalForm.addEventListener("submit", function(e) {
       .then(function() {
         rentalForm.reset();
         resetFotoInput();
-
         alert("Sewa berhasil disimpan!");
       })
       .catch(function(err) {
-        console.error(err);
-
-        alert(
-          "Gagal simpan: " +
-          err.message +
-          "\n\nCek Rules Realtime Database sudah Publish?"
-        );
-      })
-      .finally(function() {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML =
-          '<i class="fas fa-save"></i> Simpan Sewa';
-      });
-  }
-
-  if (file) {
-    const reader = new FileReader();
-
-    reader.onload = function(ev) {
-      saveData(ev.target.result);
-    };
-
-    reader.onerror = function() {
-      alert("Foto gagal diproses.");
-
-      submitBtn.disabled = false;
-      submitBtn.innerHTML =
-        '<i class="fas fa-save"></i> Simpan Sewa';
-    };
-
-    reader.readAsDataURL(file);
-  } else {
-    saveData("");
-  }
-});
-
-// =====================================================
-// REALTIME LISTENER
-// =====================================================
-
-function startRealtimeListener() {
-  if (!db) {
-    return;
-  }
-
-  db.ref("rentals")
-    .orderByChild("createdAt")
-    .on(
-      "value",
-      function(snapshot) {
-        const rentals = [];
-
-        snapshot.forEach(function(child) {
-          const data = child.val();
-          data.id = child.key;
-          rentals.push(data);
-        });
-
-        rentals.reverse();
-
-        allRentals = rentals;
-
-        updateDashboard(rentals);
-      },
-      function(error) {
-        console.error("Listener error:", error);
-
-        document.getElementById("totalAll").textContent =
-          "Error Rules";
-
-        document.getElementById("latestHistory").innerHTML =
-          '<p class="empty">Error: ' +
-          error.message +
-          "<br>Cek Rules sudah Publish?</p>";
-      }
-    );
-}
-
-function updateDashboard(rentals) {
-  let totalAC = 0;
-  let totalB = 0;
-
-  rentals.forEach(function(r) {
-    const n = Number(r.nominal) || 0;
-
-    if (r.psUnit === "A" || r.psUnit === "C") {
-      totalAC += n;
-    } else if (r.psUnit === "B") {
-      totalB += n;
-    }
-  });
-
-  document.getElementById("totalAC").textContent = formatRp(totalAC);
-  document.getElementById("totalB").textContent = formatRp(totalB);
-  document.getElementById("totalAll").textContent =
-    formatRp(totalAC + totalB);
-
-  const latestEl = document.getElementById("latestHistory");
-
-  if (rentals.length === 0) {
-    latestEl.innerHTML =
-      '<p class="empty">Belum ada data</p>';
-  } else {
-    const latest = rentals.slice(0, 10);
-    const master = isMaster();
-
-    latestEl.innerHTML = latest
-      .map(function(r) {
-        const actions = master
-          ? '<div class="item-actions">' +
-            '<button class="btn-action btn-edit" data-id="' +
-            r.id +
-            '"><i class="fas fa-pen"></i></button>' +
-            '<button class="btn-action btn-delete" data-id="' +
-            r.id +
-            '"><i class="fas fa-trash"></i></button>' +
-            "</div>"
-          : "";
-
-        return (
-          '<div class="history-item">' +
-          (r.fotoUrl
-            ? '<img src="' + r.fotoUrl + '" alt="Foto">'
-            : '<div class="no-photo"><i class="fas fa-user"></i></div>') +
-          '<div class="item-info">' +
-          '<div class="nomor">' +
-          escapeHtml(r.nomorPenyewa) +
-          "</div>" +
-          '<div class="meta">PS ' +
-          r.psUnit +
-          " · " +
-          r.durasi +
-          " " +
-          r.durasiUnit +
-          " · " +
-          formatDate(r.createdAt) +
-          "</div>" +
-          "</div>" +
-          '<div class="item-amount">' +
-          formatRp(r.nominal) +
-          "</div>" +
-          actions +
-          "</div>"
-        );
-      })
-      .join("");
-
-    if (master) {
-      latestEl.querySelectorAll(".btn-edit").forEach(function(btn) {
-        btn.addEventListener("click", function() {
-          openEditModal(btn.dataset.id);
-        });
-      });
-
-      latestEl.querySelectorAll(".btn-delete").forEach(function(btn) {
-        btn.addEventListener("click", function() {
-          deleteRental(btn.dataset.id);
-        });
-      });
-    }
-  }
-
-  const countMap = {};
-
-  rentals.forEach(function(r) {
-    const key = r.nomorPenyewa;
-
-    if (!countMap[key]) {
-      countMap[key] = {
-        nomor: key,
-        count: 0,
-        totalNominal: 0,
-        lastFoto: r.fotoUrl
-      };
-    }
-
-    countMap[key].count += 1;
-    countMap[key].totalNominal += Number(r.nominal) || 0;
-
-    if (r.fotoUrl) {
-      countMap[key].lastFoto = r.fotoUrl;
-    }
-  });
-
-  const sorted = Object.values(countMap).sort(function(a, b) {
-    return b.count - a.count;
-  });
-
-  const topEl = document.getElementById("topPenyewa");
-
-  if (sorted.length === 0) {
-    topEl.innerHTML =
-      '<p class="empty">Belum ada data</p>';
-  } else {
-    topEl.innerHTML = sorted
-      .slice(0, 10)
-      .map(function(p, i) {
-        const rankClass =
-          i === 0 ? "gold" :
-          i === 1 ? "silver" :
-          i === 2 ? "bronze" : "";
-
-        return (
-          '<div class="history-item">' +
-          '<div class="rank-badge ' +
-          rankClass +
-          '">' +
-          (i + 1) +
-          "</div>" +
-          (p.lastFoto
-            ? '<img src="' + p.lastFoto + '" alt="Foto">'
-            : '<div class="no-photo"><i class="fas fa-user"></i></div>') +
-          '<div class="item-info">' +
-          '<div class="nomor">' +
-          escapeHtml(p.nomor) +
-          "</div>" +
-          '<div class="meta">' +
-          p.count +
-          "x sewa · Total " +
-          formatRp(p.totalNominal) +
-          "</div>" +
-          "</div>" +
-          "</div>"
-        );
-      })
-      .join("");
-  }
-}
-
-// =====================================================
-// HAPUS TRANSAKSI
-// =====================================================
-
-function deleteRental(id) {
-  if (!isMaster()) {
-    return;
-  }
-
-  const rental = allRentals.find(function(r) {
-    return r.id === id;
-  });
-
-  const label = rental
-    ? rental.nomorPenyewa +
-      " - PS " +
-      rental.psUnit +
-      " - " +
-      formatRp(rental.nominal)
-    : id;
-
-  if (!confirm("Hapus transaksi ini?\n\n" + label)) {
-    return;
-  }
-
-  db.ref("rentals/" + id)
-    .remove()
-    .catch(function(err) {
-      alert("Gagal hapus: " + err.message);
-    });
-}
-
-// =====================================================
-// EDIT TRANSAKSI
-// =====================================================
-
-function openEditModal(id) {
-  if (!isMaster()) {
-    return;
-  }
-
-  const rental = allRentals.find(function(r) {
-    return r.id === id;
-  });
-
-  if (!rental) {
-    return;
-  }
-
-  document.getElementById("editId").value = rental.id;
-  document.getElementById("editNomor").value =
-    rental.nomorPenyewa
+        console.error(e
