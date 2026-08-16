@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Omset Sewa PS</title>
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
 
-  <!-- LOGIN SCREEN -->
+  <!-- LOGIN -->
   <div id="loginScreen" class="screen">
     <div class="login-card">
       <div class="logo">
@@ -42,8 +42,9 @@
     </div>
   </div>
 
-  <!-- DASHBOARD SCREEN -->
+  <!-- DASHBOARD -->
   <div id="dashboardScreen" class="screen hidden">
+
     <header class="header">
       <div class="header-left">
         <i class="fas fa-gamepad"></i>
@@ -61,7 +62,21 @@
 
     <main class="main-content">
 
-      <!-- TOTAL OMSET -->
+      <!-- BULAN AKTIF -->
+      <section class="month-banner">
+        <i class="fas fa-calendar-alt"></i>
+
+        <span>
+          Omset bulan aktif:
+          <strong id="activeMonthLabel">-</strong>
+        </span>
+
+        <small>
+          Omset reset otomatis saat bulan berganti. Kas tidak direset.
+        </small>
+      </section>
+
+      <!-- OMSET -->
       <section class="totals-section">
         <div class="total-card card-a">
           <div class="total-icon">
@@ -69,7 +84,7 @@
           </div>
 
           <div class="total-info">
-            <span class="total-label">Omset PS A + C</span>
+            <span class="total-label">Pendapatan Bersih PS A + C</span>
             <span class="total-value" id="totalAC">Rp 0</span>
           </div>
         </div>
@@ -80,7 +95,7 @@
           </div>
 
           <div class="total-info">
-            <span class="total-label">Omset PS B</span>
+            <span class="total-label">Pendapatan Bersih PS B</span>
             <span class="total-value" id="totalB">Rp 0</span>
           </div>
         </div>
@@ -91,13 +106,65 @@
           </div>
 
           <div class="total-info">
-            <span class="total-label">Total Omset Keseluruhan</span>
+            <span class="total-label">Total Pendapatan Bersih Bulan Ini</span>
             <span class="total-value" id="totalAll">Rp 0</span>
           </div>
         </div>
       </section>
 
-      <!-- FORM INPUT -->
+      <!-- KAS -->
+      <section class="kas-section">
+        <div class="section-heading">
+          <div>
+            <h2>
+              <i class="fas fa-wallet"></i>
+              Kas Usaha
+            </h2>
+
+            <p>
+              Kas 5% masuk otomatis dari setiap sewa.
+              Pengeluaran mengurangi saldo kas.
+            </p>
+          </div>
+        </div>
+
+        <div class="kas-grid">
+          <div class="total-card kas-saldo-card">
+            <div class="total-icon">
+              <i class="fas fa-wallet"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Saldo Kas Berjalan</span>
+              <span class="total-value" id="kasSaldo">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="total-card kas-masuk-card">
+            <div class="total-icon">
+              <i class="fas fa-arrow-down"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Total Kas Masuk</span>
+              <span class="total-value" id="kasMasuk">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="total-card kas-keluar-card">
+            <div class="total-icon">
+              <i class="fas fa-arrow-up"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Total Kas Keluar</span>
+              <span class="total-value" id="kasKeluar">Rp 0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FORM SEWA -->
       <section class="form-section">
         <h2>
           <i class="fas fa-plus-circle"></i>
@@ -149,23 +216,21 @@
             </div>
 
             <div class="form-group">
-              <label for="nominal">Nominal (Rp)</label>
+              <label for="nominal">Nominal Sewa Kotor (Rp)</label>
 
               <input
                 type="number"
                 id="nominal"
-                min="0"
+                min="1"
                 placeholder="50000"
                 required
               >
             </div>
 
-            <!-- FOTO: BISA GALERI ATAU KAMERA -->
             <div class="form-group full-width">
-              <label for="foto">Foto Penyewa</label>
+              <label for="foto">Foto Penyewa (Opsional)</label>
 
               <div class="file-upload">
-                <!-- Jangan gunakan capture="environment", agar galeri tersedia -->
                 <input type="file" id="foto" accept="image/*">
 
                 <label for="foto" class="file-label">
@@ -176,18 +241,19 @@
                 <div id="previewContainer" class="preview-container hidden">
                   <img id="fotoPreview" alt="Preview Foto Penyewa">
 
-                  <button
-                    type="button"
-                    id="removeFoto"
-                    class="btn-remove"
-                    title="Hapus Foto"
-                  >
+                  <button type="button" id="removeFoto" class="btn-remove">
                     <i class="fas fa-times"></i>
                   </button>
                 </div>
               </div>
             </div>
 
+          </div>
+
+          <div class="form-note">
+            <i class="fas fa-circle-info"></i>
+            Kas otomatis sebesar 5% dari nominal sewa.
+            Panel omset menampilkan pendapatan setelah potongan kas.
           </div>
 
           <button type="submit" class="btn-primary btn-submit" id="submitBtn">
@@ -197,6 +263,62 @@
         </form>
       </section>
 
+      <!-- PENGELUARAN -->
+      <section class="expense-section">
+        <div class="section-heading">
+          <div>
+            <h2>
+              <i class="fas fa-money-bill-transfer"></i>
+              Pengeluaran Usaha
+            </h2>
+
+            <p>
+              Pengeluaran akan otomatis mengurangi saldo kas.
+            </p>
+          </div>
+
+          <button type="button" id="openExpenseModal" class="btn-danger">
+            <i class="fas fa-minus-circle"></i>
+            Tambah Pengeluaran
+          </button>
+        </div>
+
+        <div class="expense-summary-grid">
+          <div class="total-card expense-total-card">
+            <div class="total-icon">
+              <i class="fas fa-arrow-up"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Pengeluaran Bulan Ini</span>
+              <span class="total-value" id="totalExpenses">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="total-card net-income-card">
+            <div class="total-icon">
+              <i class="fas fa-scale-balanced"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Sisa Pendapatan Bulan Ini</span>
+              <span class="total-value" id="netIncome">Rp 0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="history-card">
+          <h3>
+            <i class="fas fa-list"></i>
+            Riwayat Pengeluaran
+          </h3>
+
+          <div id="expenseHistory" class="history-list">
+            <p class="empty">Belum ada pengeluaran</p>
+          </div>
+        </div>
+      </section>
+
       <!-- HISTORY -->
       <section class="history-section">
         <div class="history-grid">
@@ -204,7 +326,7 @@
           <div class="history-card">
             <h3>
               <i class="fas fa-history"></i>
-              History Terakhir
+              History Sewa Terakhir
             </h3>
 
             <div id="latestHistory" class="history-list">
@@ -215,7 +337,7 @@
           <div class="history-card">
             <h3>
               <i class="fas fa-trophy"></i>
-              Penyewa Paling Banyak
+              Penyewa Terbanyak Bulan Ini
             </h3>
 
             <div id="topPenyewa" class="history-list">
@@ -226,10 +348,148 @@
         </div>
       </section>
 
+      <!-- REKAP BULANAN -->
+      <section class="monthly-section">
+        <div class="section-heading">
+          <div>
+            <h2>
+              <i class="fas fa-calendar-alt"></i>
+              Rekap Pendapatan Bulanan
+            </h2>
+
+            <p>
+              Rekap bulan lama tetap tersimpan.
+            </p>
+          </div>
+
+          <select id="monthlySelect">
+            <option value="">Memuat data...</option>
+          </select>
+        </div>
+
+        <div class="monthly-grid">
+
+          <div class="total-card monthly-income-card">
+            <div class="total-icon">
+              <i class="fas fa-money-bill-wave"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Pendapatan Bersih</span>
+              <span class="total-value" id="monthlyIncome">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="total-card monthly-kas-card">
+            <div class="total-icon">
+              <i class="fas fa-piggy-bank"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Kas 5%</span>
+              <span class="total-value" id="monthlyKas">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="total-card monthly-expense-card">
+            <div class="total-icon">
+              <i class="fas fa-receipt"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Pengeluaran</span>
+              <span class="total-value" id="monthlyExpenses">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="total-card monthly-final-card">
+            <div class="total-icon">
+              <i class="fas fa-chart-line"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Sisa Pendapatan</span>
+              <span class="total-value" id="monthlyFinal">Rp 0</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="history-card">
+          <h3>
+            <i class="fas fa-archive"></i>
+            Riwayat Rekap Bulanan
+          </h3>
+
+          <div id="monthlyHistory" class="history-list">
+            <p class="empty">Belum ada data rekap bulanan</p>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 
-  <!-- EDIT MODAL: HANYA MASTER -->
+  <!-- MODAL PENGELUARAN -->
+  <div id="expenseModal" class="modal hidden">
+    <div class="modal-overlay" id="expenseModalOverlay"></div>
+
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>
+          <i class="fas fa-minus-circle"></i>
+          Tambah Pengeluaran
+        </h3>
+
+        <button type="button" id="closeExpenseModal" class="btn-icon">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="expenseForm">
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label for="expenseNominal">Nominal Pengeluaran (Rp)</label>
+
+            <input
+              type="number"
+              id="expenseNominal"
+              min="1"
+              placeholder="Contoh: 20000"
+              required
+            >
+          </div>
+
+          <div class="form-group full-width">
+            <label for="expenseKeterangan">Keterangan Pengeluaran</label>
+
+            <textarea
+              id="expenseKeterangan"
+              rows="4"
+              maxlength="300"
+              placeholder="Contoh: Beli token listrik untuk operasional PS."
+              required
+            ></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelExpense" class="btn-secondary">
+            Batal
+          </button>
+
+          <button type="submit" id="saveExpenseBtn" class="btn-danger">
+            <i class="fas fa-save"></i>
+            Simpan Pengeluaran
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- EDIT MODAL -->
   <div id="editModal" class="modal hidden">
     <div class="modal-overlay" id="modalOverlay"></div>
 
@@ -237,7 +497,7 @@
       <div class="modal-header">
         <h3>
           <i class="fas fa-edit"></i>
-          Edit Transaksi
+          Edit Transaksi Sewa
         </h3>
 
         <button type="button" id="closeModal" class="btn-icon">
@@ -279,28 +539,15 @@
           </div>
 
           <div class="form-group">
-            <label for="editNominal">Nominal (Rp)</label>
-            <input type="number" id="editNominal" min="0" required>
+            <label for="editNominal">Nominal Sewa Kotor (Rp)</label>
+            <input type="number" id="editNominal" min="1" required>
           </div>
 
-          <!-- FOTO EDIT: JUGA BISA GALERI -->
-          <div class="form-group full-width">
-            <label for="editFoto">Foto Penyewa (Opsional Ganti)</label>
+        </div>
 
-            <div class="file-upload">
-              <input type="file" id="editFoto" accept="image/*">
-
-              <label for="editFoto" class="file-label">
-                <i class="fas fa-images"></i>
-                <span id="editFileName">Ganti Foto dari Galeri / Kamera</span>
-              </label>
-
-              <div id="editPreviewContainer" class="preview-container hidden">
-                <img id="editFotoPreview" alt="Preview Foto Penyewa">
-              </div>
-            </div>
-          </div>
-
+        <div class="form-note">
+          <i class="fas fa-circle-info"></i>
+          Edit nominal tidak mengubah catatan kas lama.
         </div>
 
         <div class="modal-actions">
@@ -317,10 +564,10 @@
     </div>
   </div>
 
-  <!-- FIREBASE SDK -->
+  <!-- FIREBASE -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
