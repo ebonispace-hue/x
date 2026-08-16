@@ -274,31 +274,44 @@ function databaseError(error) {
 
 function updateDashboard() {
   updateActiveMonthLabel();
+
   const currentMonth = getMonthKey(Date.now());
-  const rentalsThisMonth = allRentals.filter((rental) => getMonthKey(rental.createdAt) === currentMonth);
+
+  const rentalsThisMonth = allRentals.filter(function(rental) {
+    return getMonthKey(rental.createdAt) === currentMonth;
+  });
+
   let totalAC = 0;
   let totalB = 0;
+  let totalGross = 0;
 
   rentalsThisMonth.forEach(function(rental) {
+    const gross = getRentalGross(rental);
     const net = getPendapatanBersih(rental);
-    if (rental.psUnit === "A" || rental.psUnit === "C") totalAC += net;
-    if (rental.psUnit === "B") totalB += net;
+
+    totalGross += gross;
+
+    if (rental.psUnit === "A" || rental.psUnit === "C") {
+      totalAC += net;
+    }
+
+    if (rental.psUnit === "B") {
+      totalB += net;
+    }
   });
 
   setText("totalAC", formatRp(totalAC));
   setText("totalB", formatRp(totalB));
+
+  // Total Omset lama: omset bersih sesudah kas 5%.
   setText("totalAll", formatRp(totalAC + totalB));
+
+  // Card baru: total nominal sewa sebelum kas 5%.
+  setText("totalGross", formatRp(totalGross));
+
   renderLatestHistory();
   renderTopPenyewa(rentalsThisMonth);
 }
-
-function renderLatestHistory() {
-  const latestEl = $("latestHistory");
-  if (!latestEl) return;
-  if (!allRentals.length) {
-    latestEl.innerHTML = '<p class="empty">Belum ada data</p>';
-    return;
-  }
 
   latestEl.innerHTML = allRentals.slice(0, 10).map(function(rental) {
     const actions = isMaster()
