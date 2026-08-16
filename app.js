@@ -1232,6 +1232,131 @@ if (logoutBtn) {
   });
 }
 
+// =====================================================
+// MIGRASI KAS 5% UNTUK TRANSAKSI SEWA LAMA
+// Jalankan satu kali dengan: migrasiKasTransaksiLama()
+// =====================================================
+
+async function migrasiKasTransaksiLama() {
+  if (!isMaster()) {
+    alert("Hanya Master yang boleh menjalankan migrasi kas.");
+    return;
+  }
+
+  if (!db) {
+    alert("Firebase belum siap. Refresh halaman lalu coba lagi.");
+    return;
+  }
+
+  const yakin = confirm(
+    "Proses migrasi kas transaksi lama?\n\n" +
+    "Sistem akan membuat Kas Masuk 5% untuk transaksi sewa lama " +
+    "yang belum mempunyai catatan kas.\n\n" +
+    "Tidak akan menduplikasi transaksi yang sudah punya kas."
+  );
+
+  if (!yakin) return;
+
+  try {
+    const rentalSnapshot = await db.ref("rentals").once("value");
+    const kasSnapshot = await db.ref("kasTransactions").once("value");
+
+    const rentals = rentalSnapshot.val() || {};
+    const kasTransactions = kasSnapshot.val() || {};
+
+    const rentalYangSudahPunyaKas = new Set();
+
+    Object.keys(kasTransactions).forEach(function(kasId) {
+      const kas = kasTransactions[kasId];
+
+      if (kas && kas.rentalId) {
+        rentalYangSudahPunyaKas.add(kas.rentalId);
+      }
+    });
+
+    const updates = {};
+    let jumlahMigrasi = 0;
+    let totalKasDibuat = 0;
+
+    Object.keys(rentals).forEach(function(rentalId) {
+      const rental = rentals[rentalId] || {};
+
+      // Lewati transaksi yang sudah memiliki kas otomatis.
+      if (rentalYangSudahPunyaKas.has(rentalId)) {
+        return;
+      }
+
+      // Ambil nominal kotor.
+      // Data lama biasanya hanya memakai "nominal".
+      let nominalKotor = Number(rental.nominalKotor || 0);
+
+      if (!nominalKotor) {
+        nominalKotor = Number(rental.nominal || 0);
+      }
+
+      // Lewati data kosong atau nominal tidak valid.
+      if (!nominalKotor || nominalKotor <= 0) {
+        return;
+      }
+
+      const kasNominal = Math.round(nominalKotor * KAS_PERCENT);
+      const pendapatanBersih = nominalKotor - kasNominal;
+      const kasRef = db.ref("kasTransactions").push();
+
+      // Lengkapi data transaksi lama agar formatnya sama
+      // dengan transaksi baru.
+      updates["rentals/" + rentalId + "/nominalKotor"] = nominalKotor;
+      updates["rentals/" + rentalId + "/kasPersen"] = 5;
+      updates["rentals/" + rentalId + "/kasNominal"] = kasNominal;
+      updates["rentals/" + rentalId + "/nominal"] = pendapatanBersih;
+      updates["rentals/" + rentalId + "/updatedAt"] = Date.now();
+      updates["rentals/" + rentalId + "/updatedBy"] = "Master Migrasi Kas";
+
+      // Buat catatan Kas Masuk 5%.
+      updates["kasTransactions/" + kasRef.key] = {
+        jenis: "masuk",
+        nominal: kasNominal,
+        persentase: 5,
+        keterangan:
+          "Migrasi kas 5% dari sewa PS " +
+          (rental.psUnit || "-"),
+        sumber: "migrasi_sewa_lama",
+        rentalId: rentalId,
+        createdAt: Number(rental.createdAt || Date.now()),
+        createdBy: "Master Migrasi Kas",
+        monthKey: getMonthKey(
+          Number(rental.createdAt || Date.now())
+        )
+      };
+
+      jumlahMigrasi += 1;
+      totalKasDibuat += kasNominal;
+    });
+
+    if (jumlahMigrasi === 0) {
+      alert(
+        "Tidak ada transaksi lama yang perlu dimigrasi.\n\n" +
+        "Semua transaksi sewa sudah memiliki catatan kas."
+      );
+      return;
+    }
+
+    await db.ref().update(updates);
+
+    alert(
+      "Migrasi berhasil!\n\n" +
+      "Transaksi diproses: " + jumlahMigrasi + "\n" +
+      "Total Kas 5% dibuat: " + formatRp(totalKasDibuat)
+    );
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      "Migrasi gagal: " + error.message
+    );
+  }
+}
+
 initFirebase();
 checkSession();
 
