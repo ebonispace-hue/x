@@ -188,7 +188,6 @@ function updateActiveMonthLabel() {
 
 function checkSession() {
   const saved = sessionStorage.getItem("ps_user");
-
   if (!saved) return;
 
   try {
@@ -448,35 +447,89 @@ function renderTopPenyewa(rentals) {
   }).join("");
 }
 
-function renderKasSummary() {
-  let masuk = 0;
-  let keluar = 0;
+function getKasFallbackFromRentals() {
+  const rentalIdWithKas = new Set();
 
   allKasTransactions.forEach(function(kas) {
-    if (kas.jenis === "masuk") masuk += Number(kas.nominal || 0);
-    if (kas.jenis === "keluar") keluar += Number(kas.nominal || 0);
+    if (kas && kas.rentalId) {
+      rentalIdWithKas.add(kas.rentalId);
+    }
   });
 
-  setText("kasMasuk", formatRp(masuk));
-  setText("kasKeluar", formatRp(keluar));
-  setText("kasSaldo", formatRp(masuk - keluar));
+  let total = 0;
+
+  allRentals.forEach(function(rental) {
+    if (!rentalIdWithKas.has(rental.id)) {
+      total += getRentalKas(rental);
+    }
+  });
+
+  return total;
+}
+
+function getKasVirtualHistory() {
+  const rentalIdWithKas = new Set();
+
+  allKasTransactions.forEach(function(kas) {
+    if (kas && kas.rentalId) {
+      rentalIdWithKas.add(kas.rentalId);
+    }
+  });
+
+  return allRentals
+    .filter(function(rental) {
+      return !rentalIdWithKas.has(rental.id);
+    })
+    .map(function(rental) {
+      return {
+        id: "virtual_" + rental.id,
+        virtual: true,
+        jenis: "masuk",
+        nominal: getRentalKas(rental),
+        keterangan: "Kas 5% dari transaksi lama PS " + (rental.psUnit || "-"),
+        createdAt: rental.createdAt,
+        rentalId: rental.id
+      };
+    });
+}
+
+function renderKasSummary() {
+  let kasMasukTersimpan = 0;
+  let kasKeluar = 0;
+
+  allKasTransactions.forEach(function(kas) {
+    if (kas.jenis === "masuk") kasMasukTersimpan += Number(kas.nominal || 0);
+    if (kas.jenis === "keluar") kasKeluar += Number(kas.nominal || 0);
+  });
+
+  const kasDariTransaksiLama = getKasFallbackFromRentals();
+  const totalKasMasuk = kasMasukTersimpan + kasDariTransaksiLama;
+
+  setText("kasMasuk", formatRp(totalKasMasuk));
+  setText("kasKeluar", formatRp(kasKeluar));
+  setText("kasSaldo", formatRp(totalKasMasuk - kasKeluar));
+
   renderKasHistory();
 }
 
 function renderKasHistory() {
   const history = $("kasHistory");
-
   if (!history) return;
 
-  if (!allKasTransactions.length) {
+  const allKasForDisplay = allKasTransactions
+    .concat(getKasVirtualHistory())
+    .sort(function(a, b) {
+      return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+    });
+
+  if (!allKasForDisplay.length) {
     history.innerHTML = '<p class="empty">Belum ada transaksi kas</p>';
     return;
   }
 
-  history.innerHTML = allKasTransactions.slice(0, 10).map(function(kas) {
+  history.innerHTML = allKasForDisplay.slice(0, 10).map(function(kas) {
     const masuk = kas.jenis === "masuk";
-
-    const actions = isMaster()
+    const actions = isMaster() && !kas.virtual
       ? '<div class="item-actions">' +
           '<button class="btn-action btn-edit btn-edit-kas" data-id="' + kas.id + '" title="Edit kas">' +
           '<i class="fas fa-pen"></i>' +
@@ -487,6 +540,10 @@ function renderKasHistory() {
         '</div>'
       : "";
 
+    const status = kas.virtual
+      ? '<div class="meta" style="color:#facc15; margin-top:3px;">Kas sementara dari transaksi lama</div>'
+      : "";
+
     return '<div class="history-item">' +
       '<div class="rank-badge ' + (masuk ? "gold" : "bronze") + '">' +
         (masuk ? '<i class="fas fa-arrow-down"></i>' : '<i class="fas fa-arrow-up"></i>') +
@@ -494,6 +551,7 @@ function renderKasHistory() {
       '<div class="item-info">' +
         '<div class="nomor">' + (masuk ? "Kas Masuk" : "Kas Keluar") + '</div>' +
         '<div class="meta">' + escapeHtml(kas.keterangan || "-") + ' · ' + formatDate(kas.createdAt) + '</div>' +
+        status +
       '</div>' +
       '<div class="item-amount" style="color:' + (masuk ? "#5eead4" : "#fb7185") + ';">' +
         (masuk ? "+" : "-") + formatRp(kas.nominal) +
@@ -527,7 +585,6 @@ function resetFotoInput() {
 if (fotoInput) {
   fotoInput.addEventListener("change", function(event) {
     const file = event.target.files && event.target.files[0];
-
     if (!file) return;
 
     if (!file.type || !file.type.startsWith("image/")) {
@@ -545,12 +602,10 @@ if (fotoInput) {
     if (fileName) fileName.textContent = file.name;
 
     const reader = new FileReader();
-
     reader.onload = function(loadEvent) {
       if (fotoPreview) fotoPreview.src = loadEvent.target.result;
       if (previewContainer) previewContainer.classList.remove("hidden");
     };
-
     reader.readAsDataURL(file);
   });
 }
@@ -648,16 +703,13 @@ if (rentalForm) {
 
     if (file) {
       const reader = new FileReader();
-
       reader.onload = function(loadEvent) {
         saveData(loadEvent.target.result);
       };
-
       reader.onerror = function() {
         alert("Foto gagal dibaca.");
         finish();
       };
-
       reader.readAsDataURL(file);
     } else {
       saveData("");
@@ -684,7 +736,6 @@ if (expenseModalOverlay) expenseModalOverlay.addEventListener("click", closeExpe
 if (expenseForm) {
   expenseForm.addEventListener("submit", function(event) {
     event.preventDefault();
-
     if (!db) return;
 
     const nominalExpense = Number(expenseNominal ? expenseNominal.value : 0);
@@ -745,7 +796,6 @@ if (expenseForm) {
 
 function renderExpenseHistory() {
   const history = $("expenseHistory");
-
   if (!history) return;
 
   if (!allExpenses.length) {
@@ -869,7 +919,6 @@ function refreshMonthlyRecap() {
   }).join("");
 
   monthlySelect.value = keys.includes(before) ? before : getMonthKey(Date.now());
-
   renderSelectedMonth(monthlySelect.value);
   renderMonthlyHistory(keys);
 }
@@ -885,7 +934,6 @@ function renderSelectedMonth(monthKey) {
 
 function renderMonthlyHistory(keys) {
   const history = $("monthlyHistory");
-
   if (!history) return;
 
   history.innerHTML = keys.map(function(key) {
@@ -1230,131 +1278,6 @@ if (logoutBtn) {
 
     if (pinInput) pinInput.focus();
   });
-}
-
-// =====================================================
-// MIGRASI KAS 5% UNTUK TRANSAKSI SEWA LAMA
-// Jalankan satu kali dengan: migrasiKasTransaksiLama()
-// =====================================================
-
-async function migrasiKasTransaksiLama() {
-  if (!isMaster()) {
-    alert("Hanya Master yang boleh menjalankan migrasi kas.");
-    return;
-  }
-
-  if (!db) {
-    alert("Firebase belum siap. Refresh halaman lalu coba lagi.");
-    return;
-  }
-
-  const yakin = confirm(
-    "Proses migrasi kas transaksi lama?\n\n" +
-    "Sistem akan membuat Kas Masuk 5% untuk transaksi sewa lama " +
-    "yang belum mempunyai catatan kas.\n\n" +
-    "Tidak akan menduplikasi transaksi yang sudah punya kas."
-  );
-
-  if (!yakin) return;
-
-  try {
-    const rentalSnapshot = await db.ref("rentals").once("value");
-    const kasSnapshot = await db.ref("kasTransactions").once("value");
-
-    const rentals = rentalSnapshot.val() || {};
-    const kasTransactions = kasSnapshot.val() || {};
-
-    const rentalYangSudahPunyaKas = new Set();
-
-    Object.keys(kasTransactions).forEach(function(kasId) {
-      const kas = kasTransactions[kasId];
-
-      if (kas && kas.rentalId) {
-        rentalYangSudahPunyaKas.add(kas.rentalId);
-      }
-    });
-
-    const updates = {};
-    let jumlahMigrasi = 0;
-    let totalKasDibuat = 0;
-
-    Object.keys(rentals).forEach(function(rentalId) {
-      const rental = rentals[rentalId] || {};
-
-      // Lewati transaksi yang sudah memiliki kas otomatis.
-      if (rentalYangSudahPunyaKas.has(rentalId)) {
-        return;
-      }
-
-      // Ambil nominal kotor.
-      // Data lama biasanya hanya memakai "nominal".
-      let nominalKotor = Number(rental.nominalKotor || 0);
-
-      if (!nominalKotor) {
-        nominalKotor = Number(rental.nominal || 0);
-      }
-
-      // Lewati data kosong atau nominal tidak valid.
-      if (!nominalKotor || nominalKotor <= 0) {
-        return;
-      }
-
-      const kasNominal = Math.round(nominalKotor * KAS_PERCENT);
-      const pendapatanBersih = nominalKotor - kasNominal;
-      const kasRef = db.ref("kasTransactions").push();
-
-      // Lengkapi data transaksi lama agar formatnya sama
-      // dengan transaksi baru.
-      updates["rentals/" + rentalId + "/nominalKotor"] = nominalKotor;
-      updates["rentals/" + rentalId + "/kasPersen"] = 5;
-      updates["rentals/" + rentalId + "/kasNominal"] = kasNominal;
-      updates["rentals/" + rentalId + "/nominal"] = pendapatanBersih;
-      updates["rentals/" + rentalId + "/updatedAt"] = Date.now();
-      updates["rentals/" + rentalId + "/updatedBy"] = "Master Migrasi Kas";
-
-      // Buat catatan Kas Masuk 5%.
-      updates["kasTransactions/" + kasRef.key] = {
-        jenis: "masuk",
-        nominal: kasNominal,
-        persentase: 5,
-        keterangan:
-          "Migrasi kas 5% dari sewa PS " +
-          (rental.psUnit || "-"),
-        sumber: "migrasi_sewa_lama",
-        rentalId: rentalId,
-        createdAt: Number(rental.createdAt || Date.now()),
-        createdBy: "Master Migrasi Kas",
-        monthKey: getMonthKey(
-          Number(rental.createdAt || Date.now())
-        )
-      };
-
-      jumlahMigrasi += 1;
-      totalKasDibuat += kasNominal;
-    });
-
-    if (jumlahMigrasi === 0) {
-      alert(
-        "Tidak ada transaksi lama yang perlu dimigrasi.\n\n" +
-        "Semua transaksi sewa sudah memiliki catatan kas."
-      );
-      return;
-    }
-
-    await db.ref().update(updates);
-
-    alert(
-      "Migrasi berhasil!\n\n" +
-      "Transaksi diproses: " + jumlahMigrasi + "\n" +
-      "Total Kas 5% dibuat: " + formatRp(totalKasDibuat)
-    );
-  } catch (error) {
-    console.error(error);
-
-    alert(
-      "Migrasi gagal: " + error.message
-    );
-  }
 }
 
 initFirebase();
