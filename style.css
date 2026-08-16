@@ -991,3 +991,11 @@ button:active {
     transition-duration: 0.01ms !important;
   }
 }
+.card-gross {
+  background: linear-gradient(
+    135deg,
+    #9d174d,
+    #ec4899 50%,
+    #facc15 100%
+  );
+}
