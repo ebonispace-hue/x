@@ -1,8 +1,6 @@
 // =====================================================
 // PANEL OMSET SEWA PS
 // Login Admin: 888999 | Master: 171717
-// Omset reset otomatis per bulan
-// Kas berjalan: +5% dari sewa, -pengeluaran
 // =====================================================
 
 const firebaseConfig = {
@@ -71,6 +69,29 @@ const modalOverlay = document.getElementById("modalOverlay");
 const saveEditBtn = document.getElementById("saveEditBtn");
 
 const monthlySelect = document.getElementById("monthlySelect");
+
+// Edit pengeluaran Master
+const editExpenseModal = document.getElementById("editExpenseModal");
+const editExpenseModalOverlay = document.getElementById("editExpenseModalOverlay");
+const closeEditExpenseModal = document.getElementById("closeEditExpenseModal");
+const cancelEditExpense = document.getElementById("cancelEditExpense");
+const editExpenseForm = document.getElementById("editExpenseForm");
+const editExpenseId = document.getElementById("editExpenseId");
+const editExpenseNominal = document.getElementById("editExpenseNominal");
+const editExpenseKeterangan = document.getElementById("editExpenseKeterangan");
+const saveEditExpenseBtn = document.getElementById("saveEditExpenseBtn");
+
+// Edit kas Master
+const editKasModal = document.getElementById("editKasModal");
+const editKasModalOverlay = document.getElementById("editKasModalOverlay");
+const closeEditKasModal = document.getElementById("closeEditKasModal");
+const cancelEditKas = document.getElementById("cancelEditKas");
+const editKasForm = document.getElementById("editKasForm");
+const editKasId = document.getElementById("editKasId");
+const editKasJenis = document.getElementById("editKasJenis");
+const editKasNominal = document.getElementById("editKasNominal");
+const editKasKeterangan = document.getElementById("editKasKeterangan");
+const saveEditKasBtn = document.getElementById("saveEditKasBtn");
 
 // =====================================================
 // FIREBASE
@@ -182,8 +203,11 @@ function getPendapatanBersih(rental) {
 }
 
 function updateActiveMonthLabel() {
-  document.getElementById("activeMonthLabel").textContent =
-    formatMonthKey(getMonthKey(Date.now()));
+  const element = document.getElementById("activeMonthLabel");
+
+  if (element) {
+    element.textContent = formatMonthKey(getMonthKey(Date.now()));
+  }
 }
 
 // =====================================================
@@ -250,7 +274,7 @@ function showDashboard() {
 }
 
 // =====================================================
-// REALTIME DATABASE LISTENER
+// REALTIME LISTENER
 // =====================================================
 
 function startDatabaseListeners() {
@@ -325,7 +349,7 @@ function startDatabaseListeners() {
 }
 
 // =====================================================
-// DASHBOARD OMSET BULAN BERJALAN
+// DASHBOARD
 // =====================================================
 
 function updateDashboard() {
@@ -491,7 +515,7 @@ function renderTopPenyewa(rentals) {
 }
 
 // =====================================================
-// KAS BERJALAN
+// KAS
 // =====================================================
 
 function renderKasSummary() {
@@ -512,10 +536,82 @@ function renderKasSummary() {
   document.getElementById("kasKeluar").textContent = formatRp(keluar);
   document.getElementById("kasSaldo").textContent =
     formatRp(masuk - keluar);
+
+  renderKasHistory();
+}
+
+function renderKasHistory() {
+  const kasHistory = document.getElementById("kasHistory");
+
+  if (!kasHistory) return;
+
+  if (!allKasTransactions.length) {
+    kasHistory.innerHTML =
+      '<p class="empty">Belum ada transaksi kas</p>';
+    return;
+  }
+
+  kasHistory.innerHTML = allKasTransactions.slice(0, 10).map(function(kas) {
+    const isMasuk = kas.jenis === "masuk";
+
+    const actions = isMaster()
+      ? '<div class="item-actions">' +
+          '<button class="btn-action btn-edit btn-edit-kas" data-id="' +
+          kas.id +
+          '"><i class="fas fa-pen"></i></button>' +
+          '<button class="btn-action btn-delete btn-delete-kas" data-id="' +
+          kas.id +
+          '"><i class="fas fa-trash"></i></button>' +
+        "</div>"
+      : "";
+
+    return (
+      '<div class="history-item">' +
+      '<div class="rank-badge ' +
+      (isMasuk ? "gold" : "bronze") +
+      '">' +
+      (isMasuk
+        ? '<i class="fas fa-arrow-down"></i>'
+        : '<i class="fas fa-arrow-up"></i>') +
+      "</div>" +
+      '<div class="item-info">' +
+        '<div class="nomor">' +
+        (isMasuk ? "Kas Masuk" : "Kas Keluar") +
+        "</div>" +
+        '<div class="meta">' +
+        escapeHtml(kas.keterangan || "-") +
+        " · " +
+        formatDate(kas.createdAt) +
+        "</div>" +
+      "</div>" +
+      '<div class="item-amount" style="color:' +
+      (isMasuk ? "#5eead4" : "#fb7185") +
+      ';">' +
+      (isMasuk ? "+" : "-") +
+      formatRp(kas.nominal) +
+      "</div>" +
+      actions +
+      "</div>"
+    );
+  }).join("");
+
+  if (isMaster()) {
+    kasHistory.querySelectorAll(".btn-edit-kas").forEach(function(button) {
+      button.addEventListener("click", function() {
+        openEditKasModal(button.dataset.id);
+      });
+    });
+
+    kasHistory.querySelectorAll(".btn-delete-kas").forEach(function(button) {
+      button.addEventListener("click", function() {
+        deleteKasTransaction(button.dataset.id);
+      });
+    });
+  }
 }
 
 // =====================================================
-// FOTO GALERI / KAMERA
+// FOTO
 // =====================================================
 
 function resetFotoInput() {
@@ -531,7 +627,7 @@ fotoInput.addEventListener("change", function(event) {
   if (!file) return;
 
   if (!file.type || !file.type.startsWith("image/")) {
-    alert("File yang dipilih harus berupa gambar.");
+    alert("File harus berupa gambar.");
     resetFotoInput();
     return;
   }
@@ -557,7 +653,7 @@ fotoInput.addEventListener("change", function(event) {
 removeFoto.addEventListener("click", resetFotoInput);
 
 // =====================================================
-// SIMPAN SEWA + KAS 5%
+// SIMPAN SEWA DAN KAS 5%
 // =====================================================
 
 rentalForm.addEventListener("submit", function(event) {
@@ -593,7 +689,6 @@ rentalForm.addEventListener("submit", function(event) {
     const kasRef = db.ref("kasTransactions").push();
 
     const waktu = Date.now();
-
     const kasNominal = Math.round(nominalKotor * KAS_PERCENT);
     const pendapatanBersih = nominalKotor - kasNominal;
     const monthKey = getMonthKey(waktu);
@@ -637,8 +732,7 @@ rentalForm.addEventListener("submit", function(event) {
 
         alert(
           "Sewa berhasil disimpan!\n\n" +
-          "Sewa kotor: " + formatRp(nominalKotor) + "\n" +
-          "Kas otomatis 5%: " + formatRp(kasNominal) + "\n" +
+          "Kas 5%: " + formatRp(kasNominal) + "\n" +
           "Pendapatan bersih: " + formatRp(pendapatanBersih)
         );
       })
@@ -759,6 +853,17 @@ function renderExpenseHistory() {
   }
 
   historyEl.innerHTML = allExpenses.slice(0, 10).map(function(expense) {
+    const actions = isMaster()
+      ? '<div class="item-actions">' +
+          '<button class="btn-action btn-edit btn-edit-expense" data-id="' +
+          expense.id +
+          '"><i class="fas fa-pen"></i></button>' +
+          '<button class="btn-action btn-delete btn-delete-expense" data-id="' +
+          expense.id +
+          '"><i class="fas fa-trash"></i></button>' +
+        "</div>"
+      : "";
+
     return (
       '<div class="history-item">' +
       '<div class="rank-badge bronze">' +
@@ -775,9 +880,24 @@ function renderExpenseHistory() {
       '<div class="item-amount" style="color:#fb7185;">-' +
       formatRp(expense.nominal) +
       "</div>" +
+      actions +
       "</div>"
     );
   }).join("");
+
+  if (isMaster()) {
+    historyEl.querySelectorAll(".btn-edit-expense").forEach(function(button) {
+      button.addEventListener("click", function() {
+        openEditExpenseModal(button.dataset.id);
+      });
+    });
+
+    historyEl.querySelectorAll(".btn-delete-expense").forEach(function(button) {
+      button.addEventListener("click", function() {
+        deleteExpense(button.dataset.id);
+      });
+    });
+  }
 }
 
 function refreshExpenseSummary() {
@@ -950,7 +1070,7 @@ monthlySelect.addEventListener("change", function() {
 });
 
 // =====================================================
-// EDIT DAN HAPUS MASTER
+// EDIT SEWA MASTER + UPDATE KAS TERKAIT
 // =====================================================
 
 function openEditModal(id) {
@@ -990,12 +1110,21 @@ closeModal.addEventListener("click", closeEditModal);
 cancelEdit.addEventListener("click", closeEditModal);
 modalOverlay.addEventListener("click", closeEditModal);
 
-editForm.addEventListener("submit", function(event) {
+editForm.addEventListener("submit", async function(event) {
   event.preventDefault();
 
   if (!isMaster()) return;
 
   const id = document.getElementById("editId").value;
+
+  const rental = allRentals.find(function(item) {
+    return item.id === id;
+  });
+
+  if (!rental) {
+    alert("Data transaksi tidak ditemukan.");
+    return;
+  }
 
   const nomor = document.getElementById("editNomor").value.trim();
   const psUnit = document.getElementById("editPsUnit").value;
@@ -1003,58 +1132,292 @@ editForm.addEventListener("submit", function(event) {
   const durasiUnit = document.getElementById("editDurasiUnit").value;
   const nominalKotor = Number(document.getElementById("editNominal").value);
 
+  if (!nomor || !psUnit || !durasi || !nominalKotor) {
+    alert("Lengkapi seluruh data transaksi.");
+    return;
+  }
+
   const kasNominal = Math.round(nominalKotor * KAS_PERCENT);
   const pendapatanBersih = nominalKotor - kasNominal;
 
   saveEditBtn.disabled = true;
 
-  db.ref("rentals/" + id)
-    .update({
-      nomorPenyewa: nomor,
-      psUnit: psUnit,
-      durasi: durasi,
-      durasiUnit: durasiUnit,
-      nominalKotor: nominalKotor,
-      kasPersen: 5,
-      kasNominal: kasNominal,
-      nominal: pendapatanBersih,
-      updatedAt: Date.now(),
-      updatedBy: currentUser.role
-    })
-    .then(function() {
-      closeEditModal();
+  try {
+    const updates = {};
 
-      alert(
-        "Transaksi berhasil diperbarui.\n\n" +
-        "Catatan kas lama tidak otomatis berubah."
-      );
-    })
-    .catch(function(error) {
-      alert("Gagal edit transaksi: " + error.message);
-    })
-    .finally(function() {
-      saveEditBtn.disabled = false;
+    updates["rentals/" + id + "/nomorPenyewa"] = nomor;
+    updates["rentals/" + id + "/psUnit"] = psUnit;
+    updates["rentals/" + id + "/durasi"] = durasi;
+    updates["rentals/" + id + "/durasiUnit"] = durasiUnit;
+    updates["rentals/" + id + "/nominalKotor"] = nominalKotor;
+    updates["rentals/" + id + "/kasPersen"] = 5;
+    updates["rentals/" + id + "/kasNominal"] = kasNominal;
+    updates["rentals/" + id + "/nominal"] = pendapatanBersih;
+    updates["rentals/" + id + "/updatedAt"] = Date.now();
+    updates["rentals/" + id + "/updatedBy"] = currentUser.role;
+
+    const relatedKas = allKasTransactions.find(function(kas) {
+      return kas.rentalId === id;
     });
+
+    if (relatedKas) {
+      updates["kasTransactions/" + relatedKas.id + "/nominal"] =
+        kasNominal;
+
+      updates["kasTransactions/" + relatedKas.id + "/keterangan"] =
+        "Kas 5% dari sewa PS " + psUnit;
+
+      updates["kasTransactions/" + relatedKas.id + "/updatedAt"] =
+        Date.now();
+
+      updates["kasTransactions/" + relatedKas.id + "/updatedBy"] =
+        currentUser.role;
+    }
+
+    await db.ref().update(updates);
+
+    closeEditModal();
+
+    alert("Transaksi sewa dan kas terkait berhasil diperbarui.");
+  } catch (error) {
+    alert("Gagal edit transaksi: " + error.message);
+  } finally {
+    saveEditBtn.disabled = false;
+  }
 });
 
-function deleteRental(id) {
+async function deleteRental(id) {
   if (!isMaster()) return;
 
-  const rental = allRentals.find(function(item) {
-    return item.id === id;
-  });
-
-  if (!rental) return;
-
-  if (!confirm("Hapus transaksi sewa ini?")) {
+  if (!confirm(
+    "Hapus transaksi sewa ini beserta kas otomatis 5% terkait?"
+  )) {
     return;
   }
 
-  db.ref("rentals/" + id)
-    .remove()
-    .catch(function(error) {
-      alert("Gagal hapus transaksi: " + error.message);
+  try {
+    const updates = {};
+
+    updates["rentals/" + id] = null;
+
+    allKasTransactions.forEach(function(kas) {
+      if (kas.rentalId === id) {
+        updates["kasTransactions/" + kas.id] = null;
+      }
     });
+
+    await db.ref().update(updates);
+
+    alert("Transaksi sewa dan kas terkait berhasil dihapus.");
+  } catch (error) {
+    alert("Gagal hapus transaksi: " + error.message);
+  }
+}
+
+// =====================================================
+// EDIT PENGELUARAN MASTER
+// =====================================================
+
+function openEditExpenseModal(id) {
+  if (!isMaster()) return;
+
+  const expense = allExpenses.find(function(item) {
+    return item.id === id;
+  });
+
+  if (!expense) return;
+
+  editExpenseId.value = expense.id;
+  editExpenseNominal.value = Number(expense.nominal || 0);
+  editExpenseKeterangan.value = expense.keterangan || "";
+
+  editExpenseModal.classList.remove("hidden");
+}
+
+function closeEditExpenseModalForm() {
+  editExpenseModal.classList.add("hidden");
+  editExpenseForm.reset();
+}
+
+closeEditExpenseModal.addEventListener(
+  "click",
+  closeEditExpenseModalForm
+);
+
+cancelEditExpense.addEventListener(
+  "click",
+  closeEditExpenseModalForm
+);
+
+editExpenseModalOverlay.addEventListener(
+  "click",
+  closeEditExpenseModalForm
+);
+
+editExpenseForm.addEventListener("submit", async function(event) {
+  event.preventDefault();
+
+  if (!isMaster()) return;
+
+  const id = editExpenseId.value;
+  const nominal = Number(editExpenseNominal.value);
+  const keterangan = editExpenseKeterangan.value.trim();
+
+  if (!id || !nominal || nominal <= 0 || !keterangan) {
+    alert("Lengkapi nominal dan keterangan pengeluaran.");
+    return;
+  }
+
+  saveEditExpenseBtn.disabled = true;
+
+  try {
+    const updates = {};
+
+    updates["expenses/" + id + "/nominal"] = nominal;
+    updates["expenses/" + id + "/keterangan"] = keterangan;
+    updates["expenses/" + id + "/updatedAt"] = Date.now();
+    updates["expenses/" + id + "/updatedBy"] = currentUser.role;
+
+    const relatedKas = allKasTransactions.find(function(kas) {
+      return kas.expenseId === id;
+    });
+
+    if (relatedKas) {
+      updates["kasTransactions/" + relatedKas.id + "/nominal"] = nominal;
+
+      updates["kasTransactions/" + relatedKas.id + "/keterangan"] =
+        "Pengeluaran: " + keterangan;
+
+      updates["kasTransactions/" + relatedKas.id + "/updatedAt"] =
+        Date.now();
+
+      updates["kasTransactions/" + relatedKas.id + "/updatedBy"] =
+        currentUser.role;
+    }
+
+    await db.ref().update(updates);
+
+    closeEditExpenseModalForm();
+
+    alert("Pengeluaran dan kas keluar terkait berhasil diperbarui.");
+  } catch (error) {
+    alert("Gagal edit pengeluaran: " + error.message);
+  } finally {
+    saveEditExpenseBtn.disabled = false;
+  }
+});
+
+async function deleteExpense(id) {
+  if (!isMaster()) return;
+
+  if (!confirm(
+    "Hapus pengeluaran ini beserta kas keluar terkait?"
+  )) {
+    return;
+  }
+
+  try {
+    const updates = {};
+
+    updates["expenses/" + id] = null;
+
+    allKasTransactions.forEach(function(kas) {
+      if (kas.expenseId === id) {
+        updates["kasTransactions/" + kas.id] = null;
+      }
+    });
+
+    await db.ref().update(updates);
+
+    alert("Pengeluaran dan kas keluar terkait berhasil dihapus.");
+  } catch (error) {
+    alert("Gagal hapus pengeluaran: " + error.message);
+  }
+}
+
+// =====================================================
+// EDIT KAS MASTER
+// =====================================================
+
+function openEditKasModal(id) {
+  if (!isMaster()) return;
+
+  const kas = allKasTransactions.find(function(item) {
+    return item.id === id;
+  });
+
+  if (!kas) return;
+
+  editKasId.value = kas.id;
+  editKasJenis.value = kas.jenis || "masuk";
+  editKasNominal.value = Number(kas.nominal || 0);
+  editKasKeterangan.value = kas.keterangan || "";
+
+  editKasModal.classList.remove("hidden");
+}
+
+function closeEditKasModalForm() {
+  editKasModal.classList.add("hidden");
+  editKasForm.reset();
+}
+
+closeEditKasModal.addEventListener("click", closeEditKasModalForm);
+cancelEditKas.addEventListener("click", closeEditKasModalForm);
+editKasModalOverlay.addEventListener("click", closeEditKasModalForm);
+
+editKasForm.addEventListener("submit", async function(event) {
+  event.preventDefault();
+
+  if (!isMaster()) return;
+
+  const id = editKasId.value;
+  const jenis = editKasJenis.value;
+  const nominal = Number(editKasNominal.value);
+  const keterangan = editKasKeterangan.value.trim();
+
+  if (!id || !jenis || !nominal || nominal <= 0 || !keterangan) {
+    alert("Lengkapi semua data kas.");
+    return;
+  }
+
+  saveEditKasBtn.disabled = true;
+
+  try {
+    await db.ref("kasTransactions/" + id).update({
+      jenis: jenis,
+      nominal: nominal,
+      keterangan: keterangan,
+      updatedAt: Date.now(),
+      updatedBy: currentUser.role
+    });
+
+    closeEditKasModalForm();
+
+    alert("Transaksi kas berhasil diperbarui.");
+  } catch (error) {
+    alert("Gagal edit kas: " + error.message);
+  } finally {
+    saveEditKasBtn.disabled = false;
+  }
+});
+
+async function deleteKasTransaction(id) {
+  if (!isMaster()) return;
+
+  if (!confirm(
+    "Hapus transaksi kas ini?\n\n" +
+    "Menghapus kas tidak menghapus transaksi sewa/pengeluaran asal."
+  )) {
+    return;
+  }
+
+  try {
+    await db.ref("kasTransactions/" + id).remove();
+
+    alert("Transaksi kas berhasil dihapus.");
+  } catch (error) {
+    alert("Gagal hapus kas: " + error.message);
+  }
 }
 
 // =====================================================
@@ -1080,6 +1443,8 @@ logoutBtn.addEventListener("click", function() {
 
   closeEditModal();
   closeExpenseModalForm();
+  closeEditExpenseModalForm();
+  closeEditKasModalForm();
 
   pinInput.focus();
 });
