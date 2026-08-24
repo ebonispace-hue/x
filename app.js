@@ -19,6 +19,7 @@ const USERS = {
 };
 
 const KAS_PERCENT = 0.05;
+const TV_PRICE = 20000;
 const MAX_FOTO_SIZE = 1.5 * 1024 * 1024;
 
 let db = null;
@@ -641,7 +642,9 @@ if (rentalForm) {
     const durasi = durasiEl ? Number(durasiEl.value) : 0;
     const durasiUnit = durasiUnitEl ? durasiUnitEl.value : "jam";
     const nominalKotor = nominalEl ? Number(nominalEl.value) : 0;
-    const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
+const tvUnitEl = $("tvUnit");
+const tvUnit = tvUnitEl ? tvUnitEl.value : "";
+const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
 
     if (!nomor || !psUnit || !durasi || !nominalKotor) {
       alert("Lengkapi semua form sewa.");
@@ -696,6 +699,43 @@ if (rentalForm) {
         monthKey: monthKey
       };
 
+if (tvUnit === "TV_A" || tvUnit === "TV_B") {
+  const tvRentalRef = db.ref("rentals").push();
+  const tvKasRef = db.ref("kasTransactions").push();
+
+  const tvKasNominal = Math.round(TV_PRICE * KAS_PERCENT);
+  const tvPendapatanBersih = TV_PRICE - tvKasNominal;
+
+  updates["rentals/" + tvRentalRef.key] = {
+    nomorPenyewa: nomor,
+    psUnit: tvUnit,
+    durasi: durasi,
+    durasiUnit: durasiUnit,
+    nominalKotor: TV_PRICE,
+    kasPersen: 5,
+    kasNominal: tvKasNominal,
+    nominal: tvPendapatanBersih,
+    fotoUrl: fotoUrl || "",
+    createdAt: waktu,
+    createdBy: currentUser ? currentUser.role : "Admin",
+    monthKey: monthKey,
+    owner: tvUnit === "TV_A" ? "Adan Glena" : "Aldo Laras",
+    sumberUnit: "tv_otomatis"
+  };
+
+  updates["kasTransactions/" + tvKasRef.key] = {
+    jenis: "masuk",
+    nominal: tvKasNominal,
+    persentase: 5,
+    keterangan: "Kas 5% dari sewa " + (tvUnit === "TV_A" ? "TV A — Adan Glena" : "TV B — Aldo Laras"),
+    sumber: "sewa_tv_otomatis",
+    rentalId: tvRentalRef.key,
+    createdAt: waktu,
+    createdBy: currentUser ? currentUser.role : "Admin",
+    monthKey: monthKey
+  };
+}
+      
       db.ref().update(updates)
         .then(function() {
           rentalForm.reset();
