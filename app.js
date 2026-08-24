@@ -1,8 +1,9 @@
 // =====================================================
 // PANEL OMSET SEWA PS — app.js
 // Login Admin: 888999 | Master: 171717
-// Rotasi PS: A/Adan Glena → B/Aldo Laras → C/Adan Glena
-// Rotasi TV: TV B → TV A
+// Data lama tidak diubah. Rotasi PS baru meneruskan unit
+// terakhir yang tercatat: A → B → C → A.
+// TV baru dimulai dari TV B, lalu bergantian: TV B → TV A.
 // =====================================================
 
 const firebaseConfig = {
@@ -73,13 +74,6 @@ const cancelEdit = $("cancelEdit");
 const modalOverlay = $("modalOverlay");
 const saveEditBtn = $("saveEditBtn");
 const monthlySelect = $("monthlySelect");
-
-const resetRotationBtn = $("resetRotationBtn");
-const resetRotationModal = $("resetRotationModal");
-const resetRotationOverlay = $("resetRotationOverlay");
-const closeResetRotationModal = $("closeResetRotationModal");
-const cancelResetRotation = $("cancelResetRotation");
-const confirmResetRotation = $("confirmResetRotation");
 
 function initFirebase() {
   try {
@@ -158,73 +152,46 @@ function updateActiveMonthLabel() {
   setText("activeMonthLabel", formatMonthKey(getMonthKey(Date.now())));
 }
 
-function getRotationStateFromRentals() {
-  const rentals = allRentals.slice().sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
-  let psIndex = 0;
-  let tvIndex = 0;
-
-  rentals.forEach((rental) => {
-    const psFound = PS_ROTATION.findIndex((item) => item.unit === rental.psUnit);
-    if (psFound >= 0) psIndex = (psFound + 1) % PS_ROTATION.length;
-    else psIndex = (psIndex + 1) % PS_ROTATION.length;
-
-    const tvFound = TV_ROTATION.indexOf(rental.tvUnit);
-    if (tvFound >= 0) tvIndex = (tvFound + 1) % TV_ROTATION.length;
-    else tvIndex = (tvIndex + 1) % TV_ROTATION.length;
-  });
-
-  return { psIndex, tvIndex };
+function getLastRentalWithPsUnit() {
+  return allRentals
+    .filter((rental) => PS_ROTATION.some((ps) => ps.unit === rental.psUnit))
+    .slice()
+    .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))[0] || null;
 }
 
-async function getRotationState() {
-  if (!db) throw new Error("Firebase belum siap");
-  const snapshot = await db.ref("system/rentalRotation").once("value");
-  const saved = snapshot.val();
-
-  if (saved && Number.isInteger(saved.psIndex) && Number.isInteger(saved.tvIndex)) {
-    return {
-      psIndex: saved.psIndex % PS_ROTATION.length,
-      tvIndex: saved.tvIndex % TV_ROTATION.length
-    };
-  }
-
-  const inferred = getRotationStateFromRentals();
-  await db.ref("system/rentalRotation").set({
-    ...inferred,
-    initializedAt: Date.now(),
-    initializedBy: currentUser ? currentUser.role : "System"
-  });
-  return inferred;
+function getNextPsFromLastRental() {
+  const lastRental = getLastRentalWithPsUnit();
+  const lastIndex = lastRental ? PS_ROTATION.findIndex((ps) => ps.unit === lastRental.psUnit) : -1;
+  return PS_ROTATION[lastIndex >= 0 ? (lastIndex + 1) % PS_ROTATION.length : 0];
 }
 
-async function refreshRotationPreview() {
-  if (!db) return;
-  try {
-    const state = await getRotationState();
-    const ps = PS_ROTATION[state.psIndex];
-    const tv = TV_ROTATION[state.tvIndex];
+// TV untuk transaksi baru selalu dimulai dari TV B.
+// Setelah transaksi baru pertama tersimpan, urutan berganti B → A → B.
+function getNextTvForNewRental() {
+  const rentalsWithTv = allRentals
+    .filter((rental) => TV_ROTATION.includes(rental.tvUnit))
+    .slice()
+    .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
 
-    setText("nextPsRotation", `PS ${ps.unit} — ${ps.owner}`);
-    setText("nextTvRotation", tv);
-    setText("psUnitDisplay", `PS ${ps.unit}`);
-    setText("psOwnerDisplay", ps.owner);
-    setText("tvUnitDisplay", tv);
-
-    const psUnit = $("psUnit");
-    const psOwner = $("psOwner");
-    const tvUnit = $("tvUnit");
-    if (psUnit) psUnit.value = ps.unit;
-    if (psOwner) psOwner.value = ps.owner;
-    if (tvUnit) tvUnit.value = tv;
-  } catch (error) {
-    console.error("Gagal memuat rotasi:", error);
-    setText("nextPsRotation", "Gagal memuat giliran");
-    setText("nextTvRotation", "Gagal memuat giliran");
-  }
+  if (!rentalsWithTv.length) return "TV B";
+  return rentalsWithTv[0].tvUnit === "TV B" ? "TV A" : "TV B";
 }
 
-function updateRoleUi() {
-  if (resetRotationBtn) resetRotationBtn.classList.toggle("hidden", !isMaster());
+function refreshRotationPreview() {
+  const ps = getNextPsFromLastRental();
+  const tv = getNextTvForNewRental();
+
+  const psUnit = $("psUnit");
+  const psOwner = $("psOwner");
+  const tvUnit = $("tvUnit");
+  const psUnitDisplay = $("psUnitDisplay");
+  const tvUnitDisplay = $("tvUnitDisplay");
+
+  if (psUnit) psUnit.value = ps.unit;
+  if (psOwner) psOwner.value = ps.owner;
+  if (tvUnit) tvUnit.value = tv;
+  if (psUnitDisplay) psUnitDisplay.value = "PS " + ps.unit + " — " + ps.owner;
+  if (tvUnitDisplay) tvUnitDisplay.value = tv;
 }
 
 function checkSession() {
@@ -261,7 +228,6 @@ function showDashboard() {
   if (dashboardScreen) dashboardScreen.classList.remove("hidden");
   if (userRole && currentUser) userRole.textContent = currentUser.role;
   updateActiveMonthLabel();
-  updateRoleUi();
 
   if (!firebaseReady) initFirebase();
   if (!firebaseReady) {
@@ -467,29 +433,15 @@ if (fotoInput) {
 if (removeFoto) removeFoto.addEventListener("click", resetFotoInput);
 
 async function allocateAndSaveRental(data) {
-  const rotationRef = db.ref("system/rentalRotation");
-  const allocations = [];
+  // Tidak membaca atau menulis system/rentalRotation.
+  // Unit baru ditentukan dari transaksi terakhir yang sudah tersimpan.
+  const lastRental = getLastRentalWithPsUnit();
+  const psIndex = lastRental ? PS_ROTATION.findIndex((ps) => ps.unit === lastRental.psUnit) : -1;
+  const allocation = {
+    ps: PS_ROTATION[psIndex >= 0 ? (psIndex + 1) % PS_ROTATION.length : 0],
+    tv: getNextTvForNewRental()
+  };
 
-  const transaction = await rotationRef.transaction((state) => {
-    const current = state && Number.isInteger(state.psIndex) && Number.isInteger(state.tvIndex)
-      ? state
-      : getRotationStateFromRentals();
-
-    const psIndex = ((Number(current.psIndex) % PS_ROTATION.length) + PS_ROTATION.length) % PS_ROTATION.length;
-    const tvIndex = ((Number(current.tvIndex) % TV_ROTATION.length) + TV_ROTATION.length) % TV_ROTATION.length;
-    allocations.push({ ps: PS_ROTATION[psIndex], tv: TV_ROTATION[tvIndex] });
-
-    return {
-      psIndex: (psIndex + 1) % PS_ROTATION.length,
-      tvIndex: (tvIndex + 1) % TV_ROTATION.length,
-      updatedAt: Date.now(),
-      updatedBy: currentUser ? currentUser.role : "Admin"
-    };
-  });
-
-  if (!transaction.committed || !allocations.length) throw new Error("Gagal mengambil giliran otomatis");
-
-  const allocation = allocations[allocations.length - 1];
   const rentalRef = db.ref("rentals").push();
   const kasRef = db.ref("kasTransactions").push();
   const waktu = Date.now();
@@ -526,21 +478,8 @@ async function allocateAndSaveRental(data) {
     monthKey
   };
 
-  try {
-    await db.ref().update(updates);
-    return { allocation, kasNominal, pendapatanBersih };
-  } catch (error) {
-    await rotationRef.transaction((state) => {
-      if (!state) return state;
-      return {
-        ...state,
-        psIndex: (Number(state.psIndex || 0) + PS_ROTATION.length - 1) % PS_ROTATION.length,
-        tvIndex: (Number(state.tvIndex || 0) + TV_ROTATION.length - 1) % TV_ROTATION.length,
-        rollbackAt: Date.now()
-      };
-    });
-    throw error;
-  }
+  await db.ref().update(updates);
+  return { allocation, kasNominal, pendapatanBersih };
 }
 
 if (rentalForm) {
@@ -568,13 +507,6 @@ if (rentalForm) {
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
     }
 
-    const finish = () => {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Sewa';
-      }
-    };
-
     try {
       let fotoUrl = "";
       if (file) {
@@ -589,7 +521,7 @@ if (rentalForm) {
       const result = await allocateAndSaveRental({ nomor, durasi, durasiUnit, nominalKotor, fotoUrl });
       rentalForm.reset();
       resetFotoInput();
-      await refreshRotationPreview();
+      refreshRotationPreview();
       alert(
         "Sewa berhasil disimpan!\n\n" +
         "PS: " + result.allocation.ps.unit + " — " + result.allocation.ps.owner + "\n" +
@@ -600,7 +532,10 @@ if (rentalForm) {
     } catch (error) {
       alert("Gagal menyimpan sewa: " + error.message);
     } finally {
-      finish();
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Sewa';
+      }
     }
   });
 }
@@ -731,7 +666,6 @@ function openEditModal(id) {
     editPsUnit: rental.psUnit || "",
     editPsUnitDisplay: rental.psUnit ? "PS " + rental.psUnit : "-",
     editPsOwner: rental.psOwner || "",
-    editPsOwnerDisplay: rental.psOwner || "-",
     editTvUnit: rental.tvUnit || "",
     editTvUnitDisplay: rental.tvUnit || "-",
     editDurasi: rental.durasi || 1,
@@ -800,7 +734,7 @@ if (editForm) {
 
 async function deleteRental(id) {
   if (!isMaster() || !db) return;
-  if (!confirm("Hapus transaksi sewa ini beserta kas otomatis 5% terkait?\n\nGiliran otomatis tidak diubah agar riwayat rotasi tetap konsisten.")) return;
+  if (!confirm("Hapus transaksi sewa ini beserta kas otomatis 5% terkait?\n\nUrutan transaksi baru tetap lanjut dari transaksi terakhir yang tersisa.")) return;
   try {
     const updates = { ["rentals/" + id]: null };
     allKasTransactions.forEach((kas) => { if (kas.rentalId === id) updates["kasTransactions/" + kas.id] = null; });
@@ -809,43 +743,6 @@ async function deleteRental(id) {
   } catch (error) {
     alert("Gagal hapus transaksi: " + error.message);
   }
-}
-
-function openResetRotationModal() {
-  if (!isMaster()) return;
-  if (resetRotationModal) resetRotationModal.classList.remove("hidden");
-}
-
-function closeResetRotationModalForm() {
-  if (resetRotationModal) resetRotationModal.classList.add("hidden");
-}
-
-if (resetRotationBtn) resetRotationBtn.addEventListener("click", openResetRotationModal);
-if (closeResetRotationModal) closeResetRotationModal.addEventListener("click", closeResetRotationModalForm);
-if (cancelResetRotation) cancelResetRotation.addEventListener("click", closeResetRotationModalForm);
-if (resetRotationOverlay) resetRotationOverlay.addEventListener("click", closeResetRotationModalForm);
-
-if (confirmResetRotation) {
-  confirmResetRotation.addEventListener("click", async () => {
-    if (!isMaster() || !db) return;
-    confirmResetRotation.disabled = true;
-    try {
-      await db.ref("system/rentalRotation").set({
-        psIndex: 0,
-        tvIndex: 0,
-        updatedAt: Date.now(),
-        updatedBy: currentUser.role,
-        reset: true
-      });
-      closeResetRotationModalForm();
-      await refreshRotationPreview();
-      alert("Giliran berhasil direset. Sewa berikutnya: PS A — Adan Glena, TV B.");
-    } catch (error) {
-      alert("Gagal reset giliran: " + error.message);
-    } finally {
-      confirmResetRotation.disabled = false;
-    }
-  });
 }
 
 if (loginBtn) loginBtn.addEventListener("click", doLogin);
@@ -864,7 +761,6 @@ if (logoutBtn) {
     if (loginScreen) loginScreen.classList.remove("hidden");
     closeEditModal();
     closeExpenseModalForm();
-    closeResetRotationModalForm();
     if (pinInput) pinInput.focus();
   });
 }
