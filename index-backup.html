@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Omset Sewa PS</title>
 
-  <!-- CSS ORIGINAL TIDAK DIUBAH -->
-  <link rel="stylesheet" href="style.css?v=5">
+ <link rel="stylesheet" href="style.css?v=5">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -113,15 +112,15 @@
         </div>
 
         <div class="total-card card-gross">
-          <div class="total-icon">
-            <i class="fas fa-coins"></i>
-          </div>
+  <div class="total-icon">
+    <i class="fas fa-coins"></i>
+  </div>
 
-          <div class="total-info">
-            <span class="total-label">Total Omset Kotor</span>
-            <strong id="totalGross" class="total-value">Rp 0</strong>
-          </div>
-        </div>
+  <div class="total-info">
+    <span class="total-label">Total Omset Kotor</span>
+    <strong id="totalGross" class="total-value">Rp 0</strong>
+  </div>
+</div>
       </section>
 
       <!-- KAS -->
@@ -139,18 +138,16 @@
             </p>
           </div>
         </div>
-
         <div class="history-card" style="margin-top:16px;">
-          <h3>
-            <i class="fas fa-receipt"></i>
-            Riwayat Kas Terakhir
-          </h3>
+  <h3>
+    <i class="fas fa-receipt"></i>
+    Riwayat Kas Terakhir
+  </h3>
 
-          <div id="kasHistory" class="history-list">
-            <p class="empty">Belum ada transaksi kas</p>
-          </div>
-        </div>
-
+  <div id="kasHistory" class="history-list">
+    <p class="empty">Belum ada transaksi kas</p>
+  </div>
+</div>
         <div class="kas-grid">
           <div class="total-card kas-saldo-card">
             <div class="total-icon">
@@ -219,17 +216,6 @@
               </select>
             </div>
 
-            <!-- Tambahan TV memakai form-group original: warna dan visual mengikuti style.css yang sama -->
-            <div class="form-group">
-              <label for="tvUnit">Unit TV</label>
-
-              <select id="tvUnit" required>
-                <option value="">-- Pilih Unit TV --</option>
-                <option value="TV B">TV B</option>
-                <option value="TV A">TV A</option>
-              </select>
-            </div>
-
             <div class="form-group">
               <label for="durasi">Durasi</label>
 
@@ -287,7 +273,7 @@
           <div class="form-note">
             <i class="fas fa-circle-info"></i>
             Kas otomatis sebesar 5% dari nominal sewa.
-            Admin mengikuti unit otomatis; Master dapat memilih unit PS dan TV.
+            Panel omset menampilkan pendapatan setelah potongan kas.
           </div>
 
           <button type="submit" class="btn-primary btn-submit" id="submitBtn">
@@ -559,16 +545,6 @@
             </select>
           </div>
 
-          <!-- Tambahan TV memakai kelas visual original yang sama -->
-          <div class="form-group">
-            <label for="editTvUnit">Unit TV</label>
-
-            <select id="editTvUnit" required>
-              <option value="TV B">TV B</option>
-              <option value="TV A">TV A</option>
-            </select>
-          </div>
-
           <div class="form-group">
             <label for="editDurasi">Durasi</label>
 
@@ -591,7 +567,7 @@
 
         <div class="form-note">
           <i class="fas fa-circle-info"></i>
-          Edit nominal memperbarui kas otomatis terkait bila tersedia.
+          Edit nominal tidak mengubah catatan kas lama.
         </div>
 
         <div class="modal-actions">
@@ -609,10 +585,10 @@
   </div>
 
   <!-- FIREBASE -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 
-  <!-- FILE TEST: tidak menggantikan app.js produksi -->
- <script src="app-backup.js?v=1"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script src="app.js?v=40"></script>
 </body>
 </html>
