@@ -324,13 +324,20 @@ function updateDashboard() {
 
     totalGross += gross;
 
-    if (rental.psUnit === "A" || rental.psUnit === "C") {
-      totalAC += net;
-    }
+ if (
+  rental.psUnit === "A" ||
+  rental.psUnit === "C" ||
+  rental.psUnit === "TV_A"
+) {
+  totalAC += net;
+}
 
-    if (rental.psUnit === "B") {
-      totalB += net;
-    }
+if (
+  rental.psUnit === "B" ||
+  rental.psUnit === "TV_B"
+) {
+  totalB += net;
+}
   });
 
   setText("totalAC", formatRp(totalAC));
