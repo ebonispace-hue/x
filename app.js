@@ -19,7 +19,7 @@ const USERS = {
 };
 
 const KAS_PERCENT = 0.05;
-const TV_PRICE = 20000;
+const TV_PRICE = 30000;
 const MAX_FOTO_SIZE = 1.5 * 1024 * 1024;
 
 let db = null;
