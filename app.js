@@ -699,19 +699,31 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
         monthKey: monthKey
       };
 
-if (tvUnit === "TV_A" || tvUnit === "TV_B") {
+const tvPackages = {
+  TV_A_1: { unit: "TV_A", durasi: 1, nominal: TV_PRICE * 1, owner: "Adan Glena" },
+  TV_A_2: { unit: "TV_A", durasi: 2, nominal: TV_PRICE * 2, owner: "Adan Glena" },
+  TV_A_3: { unit: "TV_A", durasi: 3, nominal: TV_PRICE * 3, owner: "Adan Glena" },
+
+  TV_B_1: { unit: "TV_B", durasi: 1, nominal: TV_PRICE * 1, owner: "Aldo Laras" },
+  TV_B_2: { unit: "TV_B", durasi: 2, nominal: TV_PRICE * 2, owner: "Aldo Laras" },
+  TV_B_3: { unit: "TV_B", durasi: 3, nominal: TV_PRICE * 3, owner: "Aldo Laras" }
+};
+
+const selectedTv = tvPackages[tvUnit];
+
+if (selectedTv) {
   const tvRentalRef = db.ref("rentals").push();
   const tvKasRef = db.ref("kasTransactions").push();
 
-  const tvKasNominal = Math.round(TV_PRICE * KAS_PERCENT);
-  const tvPendapatanBersih = TV_PRICE - tvKasNominal;
+  const tvKasNominal = Math.round(selectedTv.nominal * KAS_PERCENT);
+  const tvPendapatanBersih = selectedTv.nominal - tvKasNominal;
 
   updates["rentals/" + tvRentalRef.key] = {
     nomorPenyewa: nomor,
-    psUnit: tvUnit,
-    durasi: durasi,
-    durasiUnit: durasiUnit,
-    nominalKotor: TV_PRICE,
+    psUnit: selectedTv.unit,
+    durasi: selectedTv.durasi,
+    durasiUnit: "hari",
+    nominalKotor: selectedTv.nominal,
     kasPersen: 5,
     kasNominal: tvKasNominal,
     nominal: tvPendapatanBersih,
@@ -719,7 +731,7 @@ if (tvUnit === "TV_A" || tvUnit === "TV_B") {
     createdAt: waktu,
     createdBy: currentUser ? currentUser.role : "Admin",
     monthKey: monthKey,
-    owner: tvUnit === "TV_A" ? "Adan Glena" : "Aldo Laras",
+    owner: selectedTv.owner,
     sumberUnit: "tv_otomatis"
   };
 
@@ -727,7 +739,9 @@ if (tvUnit === "TV_A" || tvUnit === "TV_B") {
     jenis: "masuk",
     nominal: tvKasNominal,
     persentase: 5,
-    keterangan: "Kas 5% dari sewa " + (tvUnit === "TV_A" ? "TV A — Adan Glena" : "TV B — Aldo Laras"),
+    keterangan: "Kas 5% dari sewa " +
+      selectedTv.unit.replace("_", " ") +
+      " · " + selectedTv.durasi + " hari · " + selectedTv.owner,
     sumber: "sewa_tv_otomatis",
     rentalId: tvRentalRef.key,
     createdAt: waktu,
