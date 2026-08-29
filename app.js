@@ -703,10 +703,12 @@ const tvPackages = {
   TV_A_1: { unit: "TV_A", durasi: 1, nominal: TV_PRICE * 1, owner: "Adan Glena" },
   TV_A_2: { unit: "TV_A", durasi: 2, nominal: TV_PRICE * 2, owner: "Adan Glena" },
   TV_A_3: { unit: "TV_A", durasi: 3, nominal: TV_PRICE * 3, owner: "Adan Glena" },
+  TV_A_4: { unit: "TV_A", durasi: 4, nominal: TV_PRICE * 4, owner: "Adan Glena" },
 
   TV_B_1: { unit: "TV_B", durasi: 1, nominal: TV_PRICE * 1, owner: "Aldo Laras" },
   TV_B_2: { unit: "TV_B", durasi: 2, nominal: TV_PRICE * 2, owner: "Aldo Laras" },
-  TV_B_3: { unit: "TV_B", durasi: 3, nominal: TV_PRICE * 3, owner: "Aldo Laras" }
+  TV_B_3: { unit: "TV_B", durasi: 3, nominal: TV_PRICE * 3, owner: "Aldo Laras" },
+  TV_B_4: { unit: "TV_B", durasi: 4, nominal: TV_PRICE * 4, owner: "Aldo Laras" }
 };
 
 const selectedTv = tvPackages[tvUnit];
