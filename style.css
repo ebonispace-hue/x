@@ -999,3 +999,35 @@ button:active {
     #facc15 100%
   );
 }
+
+/* Hanya untuk History Sewa Terakhir */
+.history-sewa-list {
+  max-height: 620px;
+  overflow-y: auto;
+  padding-right: 7px;
+}
+
+/* Scrollbar Chrome, Edge, Opera */
+.history-sewa-list::-webkit-scrollbar {
+  width: 7px;
+}
+
+.history-sewa-list::-webkit-scrollbar-track {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.history-sewa-list::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: linear-gradient(#8b5cf6, #ec4899);
+}
+
+.history-sewa-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(#a855f7, #facc15);
+}
+
+/* Scrollbar Firefox */
+.history-sewa-list {
+  scrollbar-width: thin;
+  scrollbar-color: #ec4899 rgba(255, 255, 255, 0.08);
+}
