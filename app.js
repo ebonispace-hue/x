@@ -368,10 +368,6 @@ function renderLatestHistory() {
     return;
   }
 
-console.log("=== CEK ROLE MASTER ===");
-console.log("currentUser:", currentUser);
-console.log("isMaster:", isMaster());
-  
   latestEl.innerHTML = allRentals.map(function(rental) {
     const actions = isMaster()
       ? '<div class="item-actions">' +
