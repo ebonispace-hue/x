@@ -361,7 +361,7 @@ function renderLatestHistory() {
     return;
   }
 
-  latestEl.innerHTML = allRentals.slice(0, 10).map(function(rental) {
+  latestEl.innerHTML = allRentals.map(function(rental) {
     const actions = isMaster()
       ? '<div class="item-actions">' +
           '<button class="btn-action btn-edit" data-id="' + rental.id + '" title="Edit transaksi">' +
