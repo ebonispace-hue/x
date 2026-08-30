@@ -1,3 +1,4 @@
+alert("APP JS SUDAH TERBACA");
 // =====================================================
 // PANEL OMSET SEWA PS — app.js FINAL
 
