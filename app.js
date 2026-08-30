@@ -352,14 +352,19 @@ function renderLatestHistory() {
     return;
   }
 
-  latestEl.innerHTML = allRentals.slice(0, 10).map(function(rental) {
+  latestEl.innerHTML = allRentals
+  .filter(function(rental) {
+    return getMonthKey(rental.createdAt) === getMonthKey(Date.now());
+  })
+  .map(function(rental) {
+
     const actions = isMaster()
       ? '<div class="item-actions">' +
           '<button class="btn-action btn-edit" data-id="' + rental.id + '" title="Edit transaksi">' +
-          '<i class="fas fa-pen"></i>' +
+            '<i class="fas fa-pen"></i>' +
           '</button>' +
           '<button class="btn-action btn-delete" data-id="' + rental.id + '" title="Hapus transaksi">' +
-          '<i class="fas fa-trash"></i>' +
+            '<i class="fas fa-trash"></i>' +
           '</button>' +
         '</div>'
       : "";
