@@ -365,10 +365,10 @@ function renderLatestHistory() {
     const actions = isMaster()
       ? '<div class="item-actions">' +
           '<button class="btn-action btn-edit" data-id="' + rental.id + '" title="Edit transaksi">' +
-          '<i class="fas fa-pen"></i>' +
+            '<i class="fas fa-pen"></i>' +
           '</button>' +
           '<button class="btn-action btn-delete" data-id="' + rental.id + '" title="Hapus transaksi">' +
-          '<i class="fas fa-trash"></i>' +
+            '<i class="fas fa-trash"></i>' +
           '</button>' +
         '</div>'
       : "";
@@ -388,7 +388,7 @@ function renderLatestHistory() {
       '</div>' +
       '<div class="item-amount">' + formatRp(getRentalGross(rental)) + '</div>' +
       actions +
-      '</div>';
+    '</div>';
   }).join("");
 
   if (isMaster()) {
