@@ -151,7 +151,9 @@ function formatMonthKey(monthKey) {
 }
 
 function isMaster() {
-  return currentUser && currentUser.role === "Master";
+  return String(currentUser?.role || "")
+    .trim()
+    .toLowerCase() === "master";
 }
 
 function getRentalGross(rental) {
@@ -219,12 +221,17 @@ function doLogin() {
     return;
   }
 
-  currentUser = USERS[pin];
-  sessionStorage.setItem("ps_user", JSON.stringify(currentUser));
-  pinInput.value = "";
-  showDashboard();
-}
+  currentUser = {
+  role: String(USERS[pin].role || "").trim()
+};
 
+sessionStorage.removeItem("ps_user");
+sessionStorage.setItem("ps_user", JSON.stringify(currentUser));
+
+console.log("Login berhasil:", currentUser);
+
+pinInput.value = "";
+showDashboard();
 function showDashboard() {
   if (loginScreen) loginScreen.classList.add("hidden");
   if (dashboardScreen) dashboardScreen.classList.remove("hidden");
@@ -361,6 +368,10 @@ function renderLatestHistory() {
     return;
   }
 
+console.log("=== CEK ROLE MASTER ===");
+console.log("currentUser:", currentUser);
+console.log("isMaster:", isMaster());
+  
   latestEl.innerHTML = allRentals.map(function(rental) {
     const actions = isMaster()
       ? '<div class="item-actions">' +
