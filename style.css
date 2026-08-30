@@ -1031,3 +1031,31 @@ button:active {
   scrollbar-width: thin;
   scrollbar-color: #ec4899 rgba(255, 255, 255, 0.08);
 }
+
+/* Perbaiki posisi tombol edit/hapus pada History Sewa */
+.history-sewa-list .history-item {
+  flex-wrap: wrap;
+}
+
+.history-sewa-list .item-info {
+  min-width: 120px;
+}
+
+.history-sewa-list .item-amount {
+  margin-left: auto;
+  min-width: 82px;
+}
+
+.history-sewa-list .item-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(228, 191, 255, 0.1);
+}
+
+.history-sewa-list .btn-action {
+  width: 36px;
+  height: 36px;
+}
