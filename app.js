@@ -1,9 +1,8 @@
 alert("APP JS SUDAH TERBACA");
 // =====================================================
 // PANEL OMSET SEWA PS — app.js FINAL
-
+// Login Admin: 888999 | Master: 171717
 // =====================================================
-
 const firebaseConfig = {
   apiKey: "AIzaSyCWl_SOWyPuXUETZzXkGC8Cm_WhdqXTATg",
   authDomain: "ggyu-66f09.firebaseapp.com",
