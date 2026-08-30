@@ -19,6 +19,8 @@ const USERS = {
 };
 
 const KAS_PERCENT = 0.05;
+const TV_PRICE = 30000;
+const TV_PRICE_12_JAM = 15000;
 const MAX_FOTO_SIZE = 1.5 * 1024 * 1024;
 
 let db = null;
@@ -324,13 +326,20 @@ function updateDashboard() {
 
     totalGross += gross;
 
-    if (rental.psUnit === "A" || rental.psUnit === "C") {
-      totalAC += net;
-    }
+  if (
+  rental.psUnit === "A" ||
+  rental.psUnit === "C" ||
+  rental.psUnit === "TV_A"
+) {
+  totalAC += net;
+}
 
-    if (rental.psUnit === "B") {
-      totalB += net;
-    }
+if (
+  rental.psUnit === "B" ||
+  rental.psUnit === "TV_B"
+) {
+  totalB += net;
+}
   });
 
   setText("totalAC", formatRp(totalAC));
@@ -638,8 +647,12 @@ if (rentalForm) {
     const psUnit = psUnitEl ? psUnitEl.value : "";
     const durasi = durasiEl ? Number(durasiEl.value) : 0;
     const durasiUnit = durasiUnitEl ? durasiUnitEl.value : "jam";
-    const nominalKotor = nominalEl ? Number(nominalEl.value) : 0;
-    const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
+   const nominalKotor = nominalEl ? Number(nominalEl.value) : 0;
+
+const tvUnitEl = $("tvUnit");
+const tvUnit = tvUnitEl ? tvUnitEl.value : "";
+
+const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
 
     if (!nomor || !psUnit || !durasi || !nominalKotor) {
       alert("Lengkapi semua form sewa.");
@@ -693,7 +706,132 @@ if (rentalForm) {
         createdBy: currentUser ? currentUser.role : "Admin",
         monthKey: monthKey
       };
+      
+      const tvPackages = {
+  TV_A_12JAM: {
+    unit: "TV_A",
+    durasi: 12,
+    durasiUnit: "jam",
+    nominal: TV_PRICE_12_JAM,
+    owner: "Adan Glena"
+  },
 
+  TV_A_1: {
+    unit: "TV_A",
+    durasi: 1,
+    durasiUnit: "hari",
+    nominal: TV_PRICE * 1,
+    owner: "Adan Glena"
+  },
+
+  TV_A_2: {
+    unit: "TV_A",
+    durasi: 2,
+    durasiUnit: "hari",
+    nominal: TV_PRICE * 2,
+    owner: "Adan Glena"
+  },
+
+  TV_A_3: {
+    unit: "TV_A",
+    durasi: 3,
+    durasiUnit: "hari",
+    nominal: TV_PRICE * 3,
+    owner: "Adan Glena"
+  },
+
+  TV_A_4: {
+    unit: "TV_A",
+    durasi: 4,
+    durasiUnit: "hari",
+    nominal: TV_PRICE * 4,
+    owner: "Adan Glena"
+  },
+
+  TV_B_12JAM: {
+    unit: "TV_B",
+    durasi: 12,
+    durasiUnit: "jam",
+    nominal: TV_PRICE_12_JAM,
+    owner: "Aldo Laras"
+  },
+
+  TV_B_1: {
+    unit: "TV_B",
+    durasi: 1,
+    durasiUnit: "hari",
+    nominal: TV_PRICE * 1,
+    owner: "Aldo Laras"
+  },
+
+  TV_B_2: {
+    unit: "TV_B",
+    durasi: 2,
+    durasiUnit: "hari",
+    nominal: TV_PRICE * 2,
+    owner: "Aldo Laras"
+  },
+
+  TV_B_3: {
+    unit: "TV_B",
+    durasi: 3,
+    durasiUnit: "hari",
+    nominal: TV_PRICE * 3,
+    owner: "Aldo Laras"
+  },
+
+  TV_B_4: {
+    unit: "TV_B",
+    durasi: 4,
+    durasiUnit: "hari",
+    nominal: TV_PRICE * 4,
+    owner: "Aldo Laras"
+  }
+};
+
+const selectedTv = tvPackages[tvUnit];
+
+if (selectedTv) {
+  const tvRentalRef = db.ref("rentals").push();
+  const tvKasRef = db.ref("kasTransactions").push();
+
+  const tvKasNominal = Math.round(selectedTv.nominal * KAS_PERCENT);
+  const tvPendapatanBersih = selectedTv.nominal - tvKasNominal;
+
+  updates["rentals/" + tvRentalRef.key] = {
+    nomorPenyewa: nomor,
+    psUnit: selectedTv.unit,
+    durasi: selectedTv.durasi,
+    durasiUnit: selectedTv.durasiUnit,
+    nominalKotor: selectedTv.nominal,
+    kasPersen: 5,
+    kasNominal: tvKasNominal,
+    nominal: tvPendapatanBersih,
+    fotoUrl: fotoUrl || "",
+    createdAt: waktu,
+    createdBy: currentUser ? currentUser.role : "Admin",
+    monthKey: monthKey,
+    owner: selectedTv.owner,
+    sumberUnit: "tv_otomatis"
+  };
+
+  updates["kasTransactions/" + tvKasRef.key] = {
+    jenis: "masuk",
+    nominal: tvKasNominal,
+    persentase: 5,
+    keterangan: "Kas 5% dari sewa " +
+      selectedTv.unit.replace("_", " ") +
+      " · " + selectedTv.durasi + " " +
+      selectedTv.durasiUnit +
+      " · " + selectedTv.owner,
+    sumber: "sewa_tv_otomatis",
+    rentalId: tvRentalRef.key,
+    createdAt: waktu,
+    createdBy: currentUser ? currentUser.role : "Admin",
+    monthKey: monthKey
+  };
+}
+      
       db.ref().update(updates)
         .then(function() {
           rentalForm.reset();
