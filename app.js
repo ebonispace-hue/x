@@ -13,33 +13,6 @@ const firebaseConfig = {
   appId: "1:108449585539:web:8dcfec087d7eddf5c83eb6"
 };
 
-const SHEETS_SYNC_URL =
-  "https://script.google.com/macros/s/AKfycbwUdij_QWPbmtItkwstBw5itRgkxdDJrWGuR9UMmrOKyo0spaSJFargGYAGdSY5ipkp/exec";
-
-const SHEETS_SYNC_TOKEN = "eboni_isi_token_acak_panjang_minimal_40_karakter";
-function syncToGoogleSheets(type, action, id, data) {
-  const payload = {
-    token: SHEETS_SYNC_TOKEN,
-    type: type,
-    action: action,
-    id: id,
-    data: data || {}
-  };
-
-  fetch(SHEETS_SYNC_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify(payload)
-  }).catch(function(error) {
-    console.warn("Google Sheets sync gagal:", error);
-  });
-}
-
-
-
 const USERS = {
   "888999": { role: "Admin" },
   "171717": { role: "Master" }
@@ -733,9 +706,6 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
         createdBy: currentUser ? currentUser.role : "Admin",
         monthKey: monthKey
       };
-
-      const rentalData = updates["rentals/" + rentalRef.key];
-const kasData = updates["kasTransactions/" + kasRef.key];
       
       const tvPackages = {
   TV_A_12JAM: {
@@ -861,36 +831,19 @@ if (selectedTv) {
     monthKey: monthKey
   };
 }
-   db.ref().update(updates)
-  .then(function() {
-    // Kirim data yang BARU disimpan ke Google Sheet.
-    syncToGoogleSheets(
-      "SEWA",
-      "upsert",
-      rentalRef.key,
-      rentalData
-    );
+      
+      db.ref().update(updates)
+        .then(function() {
+          rentalForm.reset();
+          resetFotoInput();
+          alert("Sewa berhasil disimpan!\n\nKas 5%: " + formatRp(kasNominal) + "\nPendapatan bersih: " + formatRp(pendapatanBersih));
+        })
+        .catch(function(error) {
+          alert("Gagal menyimpan sewa: " + error.message);
+        })
+        .finally(finish);
+    }
 
-    syncToGoogleSheets(
-      "KAS",
-      "upsert",
-      kasRef.key,
-      kasData
-    );
-
-    rentalForm.reset();
-    resetFotoInput();
-
-    alert(
-      "Sewa berhasil disimpan!\n\n" +
-      "Kas 5%: " + formatRp(kasNominal) + "\n" +
-      "Pendapatan bersih: " + formatRp(pendapatanBersih)
-    );
-  })
-  .catch(function(error) {
-    alert("Gagal menyimpan sewa: " + error.message);
-  })
-  .finally(finish);
     if (file) {
       const reader = new FileReader();
       reader.onload = function(loadEvent) {
