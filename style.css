@@ -1067,3 +1067,127 @@ button:active {
   opacity: 1 !important;
   flex: 0 0 36px;
 }
+
+
+.monthly-detail-modal-card {
+  width: min(900px, calc(100vw - 28px));
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.monthly-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 18px 0 24px;
+}
+
+.detail-summary-item {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.detail-summary-item span {
+  display: block;
+  margin-bottom: 6px;
+  color: #aeb7c9;
+  font-size: 12px;
+}
+
+.detail-summary-item strong {
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.monthly-detail-content h4 {
+  margin: 25px 0 10px;
+  font-size: 16px;
+}
+
+.month-detail-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.month-detail-item:last-child {
+  border-bottom: none;
+}
+
+.month-detail-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.month-detail-title {
+  display: block;
+  color: #fff;
+  font-weight: 700;
+}
+
+.month-detail-meta {
+  display: block;
+  margin-top: 5px;
+  color: #aeb7c9;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.month-detail-right {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.month-detail-price {
+  display: block;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.month-detail-subprice {
+  display: block;
+  margin-top: 4px;
+  color: #76e4a5;
+  font-size: 12px;
+}
+
+.month-detail-expense {
+  color: #fb7185;
+}
+
+.month-detail-kas-in {
+  color: #5eead4;
+}
+
+.month-detail-kas-out {
+  color: #fb7185;
+}
+
+.btn-monthly-detail {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  font-size: 12px;
+}
+
+.btn-monthly-detail:hover {
+  background: rgba(99, 102, 241, 0.35);
+}
+
+@media (max-width: 720px) {
+  .monthly-detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .month-detail-item {
+    align-items: flex-start;
+  }
+}
