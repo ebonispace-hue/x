@@ -68,6 +68,21 @@ const modalOverlay = $("modalOverlay");
 const saveEditBtn = $("saveEditBtn");
 const monthlySelect = $("monthlySelect");
 
+const monthlyDetailModal = $("monthlyDetailModal");
+const monthlyDetailOverlay = $("monthlyDetailOverlay");
+const closeMonthlyDetailModal = $("closeMonthlyDetailModal");
+
+const monthlyDetailTitle = $("monthlyDetailTitle");
+const detailGross = $("detailGross");
+const detailIncome = $("detailIncome");
+const detailKas = $("detailKas");
+const detailExpenses = $("detailExpenses");
+const detailFinal = $("detailFinal");
+
+const monthlyRentalDetailList = $("monthlyRentalDetailList");
+const monthlyExpenseDetailList = $("monthlyExpenseDetailList");
+const monthlyKasDetailList = $("monthlyKasDetailList");
+
 const editExpenseModal = $("editExpenseModal");
 const editExpenseModalOverlay = $("editExpenseModalOverlay");
 const closeEditExpenseModal = $("closeEditExpenseModal");
@@ -1086,11 +1101,213 @@ function renderMonthlyHistory(keys) {
       '<div class="rank-badge gold"><i class="fas fa-calendar"></i></div>' +
       '<div class="item-info">' +
         '<div class="nomor">' + escapeHtml(formatMonthKey(key)) + '</div>' +
-        '<div class="meta">' + summary.transactionCount + ' transaksi · Kas ' + formatRp(summary.kas) + ' · Pengeluaran ' + formatRp(summary.expenses) + '</div>' +
+        '<div class="meta">' +
+          summary.transactionCount + ' transaksi · Kas ' + formatRp(summary.kas) +
+          ' · Pengeluaran ' + formatRp(summary.expenses) +
+        '</div>' +
       '</div>' +
       '<div class="item-amount">' + formatRp(summary.final) + '</div>' +
+      '<button type="button" class="btn-monthly-detail" data-month-key="' + key + '">' +
+        '<i class="fas fa-eye"></i> Detail' +
+      '</button>' +
       '</div>';
   }).join("");
+
+  history.querySelectorAll(".btn-monthly-detail").forEach(function(button) {
+    button.addEventListener("click", function() {
+      openMonthlyDetail(button.dataset.monthKey);
+    });
+  });
+}
+
+function closeMonthlyDetail() {
+  if (monthlyDetailModal) {
+    monthlyDetailModal.classList.add("hidden");
+  }
+}
+
+function openMonthlyDetail(monthKey) {
+  if (!monthlyDetailModal) {
+    alert("Modal detail bulanan belum ada di index.html.");
+    return;
+  }
+
+  const rentals = allRentals
+    .filter(function(rental) {
+      return getMonthKey(rental.createdAt) === monthKey;
+    })
+    .sort(function(a, b) {
+      return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+    });
+
+  const expenses = allExpenses
+    .filter(function(expense) {
+      return getMonthKey(expense.createdAt) === monthKey;
+    })
+    .sort(function(a, b) {
+      return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+    });
+
+  const kas = allKasTransactions
+    .filter(function(item) {
+      return getMonthKey(item.createdAt) === monthKey;
+    })
+    .sort(function(a, b) {
+      return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+    });
+
+  const summary = getMonthlySummary(monthKey);
+
+  const gross = rentals.reduce(function(total, rental) {
+    return total + getRentalGross(rental);
+  }, 0);
+
+  if (monthlyDetailTitle) {
+    monthlyDetailTitle.textContent = formatMonthKey(monthKey);
+  }
+
+  if (detailGross) {
+    detailGross.textContent = formatRp(gross);
+  }
+
+  if (detailIncome) {
+    detailIncome.textContent = formatRp(summary.income);
+  }
+
+  if (detailKas) {
+    detailKas.textContent = formatRp(summary.kas);
+  }
+
+  if (detailExpenses) {
+    detailExpenses.textContent = formatRp(summary.expenses);
+  }
+
+  if (detailFinal) {
+    detailFinal.textContent = formatRp(summary.final);
+  }
+
+  renderMonthlyRentalList(rentals);
+  renderMonthlyExpenseList(expenses);
+  renderMonthlyKasList(kas);
+
+  monthlyDetailModal.classList.remove("hidden");
+}
+
+function renderMonthlyRentalList(rentals) {
+  if (!monthlyRentalDetailList) return;
+
+  if (!rentals.length) {
+    monthlyRentalDetailList.innerHTML =
+      '<p class="empty">Tidak ada transaksi sewa pada bulan ini.</p>';
+    return;
+  }
+
+  monthlyRentalDetailList.innerHTML = rentals.map(function(rental) {
+    const unit = String(rental.psUnit || "-").replace("_", " ");
+    const gross = getRentalGross(rental);
+    const kas = getRentalKas(rental);
+    const bersih = getPendapatanBersih(rental);
+
+    return '<div class="month-detail-item">' +
+      '<div class="month-detail-left">' +
+        '<span class="month-detail-title">' +
+          '<i class="fas fa-user"></i> ' +
+          escapeHtml(rental.nomorPenyewa || "Tanpa nomor") +
+        '</span>' +
+        '<span class="month-detail-meta">' +
+          unit + ' · ' +
+          Number(rental.durasi || 0) + ' ' +
+          escapeHtml(rental.durasiUnit || "jam") +
+          '<br>' + formatDate(rental.createdAt) +
+        '</span>' +
+      '</div>' +
+      '<div class="month-detail-right">' +
+        '<span class="month-detail-price">Bersih ' + formatRp(bersih) + '</span>' +
+        '<span class="month-detail-subprice">' +
+          'Kotor ' + formatRp(gross) + ' · Kas ' + formatRp(kas) +
+        '</span>' +
+      '</div>' +
+      '</div>';
+  }).join("");
+}
+
+function renderMonthlyExpenseList(expenses) {
+  if (!monthlyExpenseDetailList) return;
+
+  if (!expenses.length) {
+    monthlyExpenseDetailList.innerHTML =
+      '<p class="empty">Tidak ada pengeluaran pada bulan ini.</p>';
+    return;
+  }
+
+  monthlyExpenseDetailList.innerHTML = expenses.map(function(expense) {
+    return '<div class="month-detail-item">' +
+      '<div class="month-detail-left">' +
+        '<span class="month-detail-title">' +
+          '<i class="fas fa-receipt"></i> Pengeluaran Usaha' +
+        '</span>' +
+        '<span class="month-detail-meta">' +
+          escapeHtml(expense.keterangan || "-") +
+          '<br>' + formatDate(expense.createdAt) +
+        '</span>' +
+      '</div>' +
+      '<div class="month-detail-right">' +
+        '<span class="month-detail-price month-detail-expense">' +
+          '- ' + formatRp(expense.nominal) +
+        '</span>' +
+      '</div>' +
+      '</div>';
+  }).join("");
+}
+
+function renderMonthlyKasList(kas) {
+  if (!monthlyKasDetailList) return;
+
+  if (!kas.length) {
+    monthlyKasDetailList.innerHTML =
+      '<p class="empty">Tidak ada transaksi kas pada bulan ini.</p>';
+    return;
+  }
+
+  monthlyKasDetailList.innerHTML = kas.map(function(item) {
+    const masuk = item.jenis === "masuk";
+
+    return '<div class="month-detail-item">' +
+      '<div class="month-detail-left">' +
+        '<span class="month-detail-title">' +
+          '<i class="fas ' +
+          (masuk ? "fa-arrow-down" : "fa-arrow-up") +
+          '"></i> ' +
+          (masuk ? "Kas Masuk" : "Kas Keluar") +
+        '</span>' +
+        '<span class="month-detail-meta">' +
+          escapeHtml(item.keterangan || "-") +
+          '<br>' + formatDate(item.createdAt) +
+        '</span>' +
+      '</div>' +
+      '<div class="month-detail-right">' +
+        '<span class="month-detail-price ' +
+          (masuk ? "month-detail-kas-in" : "month-detail-kas-out") +
+          '">' +
+          (masuk ? "+" : "-") + formatRp(item.nominal) +
+        '</span>' +
+      '</div>' +
+      '</div>';
+  }).join("");
+}
+
+if (closeMonthlyDetailModal) {
+  closeMonthlyDetailModal.addEventListener("click", closeMonthlyDetail);
+}
+
+if (monthlyDetailOverlay) {
+  monthlyDetailOverlay.addEventListener("click", closeMonthlyDetail);
+}
+
+if (monthlySelect) {
+  monthlySelect.addEventListener("change", function() {
+    renderSelectedMonth(monthlySelect.value);
+  });
 }
 
 if (monthlySelect) {
