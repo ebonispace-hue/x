@@ -75,6 +75,10 @@ const closeMonthlyDetailModal = $("closeMonthlyDetailModal");
 const monthlyDetailTitle = $("monthlyDetailTitle");
 const detailGross = $("detailGross");
 const detailIncome = $("detailIncome");
+
+const detailGlenaNet = $("detailGlenaNet");
+const detailAldoNet = $("detailAldoNet");
+
 const detailKas = $("detailKas");
 const detailExpenses = $("detailExpenses");
 const detailFinal = $("detailFinal");
@@ -1159,6 +1163,24 @@ function openMonthlyDetail(monthKey) {
   const summary = getMonthlySummary(monthKey);
 
   const gross = rentals.reduce(function(total, rental) {
+  return total + getRentalGross(rental);
+}, 0);
+
+const glenaNet = rentals
+  .filter(function(rental) {
+    return rental.psUnit === "A" || rental.psUnit === "C";
+  })
+  .reduce(function(total, rental) {
+    return total + getPendapatanBersih(rental);
+  }, 0);
+
+const aldoNet = rentals
+  .filter(function(rental) {
+    return rental.psUnit === "B";
+  })
+  .reduce(function(total, rental) {
+    return total + getPendapatanBersih(rental);
+  }, 0);
     return total + getRentalGross(rental);
   }, 0);
 
