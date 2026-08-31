@@ -1162,27 +1162,32 @@ function openMonthlyDetail(monthKey) {
 
   const summary = getMonthlySummary(monthKey);
 
-  const gross = rentals.reduce(function(total, rental) {
-  return total + getRentalGross(rental);
-}, 0);
-
-const glenaNet = rentals
-  .filter(function(rental) {
-    return rental.psUnit === "A" || rental.psUnit === "C";
-  })
-  .reduce(function(total, rental) {
-    return total + getPendapatanBersih(rental);
-  }, 0);
-
-const aldoNet = rentals
-  .filter(function(rental) {
-    return rental.psUnit === "B";
-  })
-  .reduce(function(total, rental) {
-    return total + getPendapatanBersih(rental);
-  }, 0);
+    const gross = rentals.reduce(function(total, rental) {
     return total + getRentalGross(rental);
   }, 0);
+
+  const glenaNet = rentals
+    .filter(function(rental) {
+      return (
+        rental.psUnit === "A" ||
+        rental.psUnit === "C" ||
+        rental.psUnit === "TV_A"
+      );
+    })
+    .reduce(function(total, rental) {
+      return total + getPendapatanBersih(rental);
+    }, 0);
+
+  const aldoNet = rentals
+    .filter(function(rental) {
+      return (
+        rental.psUnit === "B" ||
+        rental.psUnit === "TV_B"
+      );
+    })
+    .reduce(function(total, rental) {
+      return total + getPendapatanBersih(rental);
+    }, 0);
 
   if (monthlyDetailTitle) {
     monthlyDetailTitle.textContent = formatMonthKey(monthKey);
@@ -1192,8 +1197,16 @@ const aldoNet = rentals
     detailGross.textContent = formatRp(gross);
   }
 
-  if (detailIncome) {
+    if (detailIncome) {
     detailIncome.textContent = formatRp(summary.income);
+  }
+
+  if (detailGlenaNet) {
+    detailGlenaNet.textContent = formatRp(glenaNet);
+  }
+
+  if (detailAldoNet) {
+    detailAldoNet.textContent = formatRp(aldoNet);
   }
 
   if (detailKas) {
