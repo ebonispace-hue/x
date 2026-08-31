@@ -606,6 +606,80 @@
     </div>
   </div>
 
+  <!-- MODAL DETAIL HISTORY BULANAN -->
+<div id="monthlyDetailModal" class="modal hidden">
+  <div class="modal-overlay" id="monthlyDetailOverlay"></div>
+
+  <div class="modal-card monthly-detail-modal-card">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-calendar-days"></i>
+        Detail: <span id="monthlyDetailTitle">-</span>
+      </h3>
+
+      <button type="button" id="closeMonthlyDetailModal" class="btn-icon">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="monthly-detail-summary">
+      <div class="detail-summary-item">
+        <span>Omset Kotor</span>
+        <strong id="detailGross">Rp 0</strong>
+      </div>
+
+      <div class="detail-summary-item">
+        <span>Pendapatan Bersih</span>
+        <strong id="detailIncome">Rp 0</strong>
+      </div>
+
+      <div class="detail-summary-item">
+        <span>Kas Masuk</span>
+        <strong id="detailKas">Rp 0</strong>
+      </div>
+
+      <div class="detail-summary-item">
+        <span>Pengeluaran</span>
+        <strong id="detailExpenses">Rp 0</strong>
+      </div>
+
+      <div class="detail-summary-item">
+        <span>Sisa Pendapatan</span>
+        <strong id="detailFinal">Rp 0</strong>
+      </div>
+    </div>
+
+    <div class="monthly-detail-content">
+      <h4>
+        <i class="fas fa-gamepad"></i>
+        Semua History Sewa
+      </h4>
+
+      <div id="monthlyRentalDetailList" class="history-list">
+        <p class="empty">Belum ada transaksi sewa.</p>
+      </div>
+
+      <h4>
+        <i class="fas fa-money-bill-transfer"></i>
+        Semua Pengeluaran
+      </h4>
+
+      <div id="monthlyExpenseDetailList" class="history-list">
+        <p class="empty">Belum ada pengeluaran.</p>
+      </div>
+
+      <h4>
+        <i class="fas fa-wallet"></i>
+        History Kas
+      </h4>
+
+      <div id="monthlyKasDetailList" class="history-list">
+        <p class="empty">Belum ada transaksi kas.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
   <!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 
