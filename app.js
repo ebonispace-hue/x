@@ -339,27 +339,36 @@ function updateDashboard() {
   let totalB = 0;
   let totalGross = 0;
 
-  rentalsThisMonth.forEach(function(rental) {
-    const gross = getRentalGross(rental);
-    const net = getPendapatanBersih(rental);
+ rentalsThisMonth.forEach(function(rental) {
+  const gross = getRentalGross(rental);
+  const net = getPendapatanBersih(rental);
 
-    totalGross += gross;
+  totalGross += gross;
 
   if (
-  rental.psUnit === "A" ||
-  rental.psUnit === "C" ||
-  rental.psUnit === "TV_A"
-) {
-  totalAC += net;
-}
+    rental.psUnit === "A" ||
+    rental.psUnit === "C" ||
+    rental.psUnit === "TV_A"
+  ) {
+    totalAC += net;
+  }
 
-if (
-  rental.psUnit === "B" ||
-  rental.psUnit === "TV_B"
-) {
-  totalB += net;
-}
-  });
+  if (
+    rental.psUnit === "B" ||
+    rental.psUnit === "TV_B"
+  ) {
+    totalB += net;
+  }
+
+  // TAMBAHAN KHUSUS PS D
+  if (rental.psUnit === "D") {
+    const bagianAldo = Math.floor(net / 2);
+    const bagianGlena = net - bagianAldo;
+
+    totalAC += bagianGlena;
+    totalB += bagianAldo;
+  }
+});
 
   setText("totalAC", formatRp(totalAC));
   setText("totalB", formatRp(totalB));
@@ -699,6 +708,14 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
       const monthKey = getMonthKey(waktu);
       const updates = {};
 
+      const bagianAldoPS_D = psUnit === "D"
+  ? Math.floor(pendapatanBersih / 2)
+  : 0;
+
+const bagianGlenaPS_D = psUnit === "D"
+  ? pendapatanBersih - bagianAldoPS_D
+  : 0;
+
       updates["rentals/" + rentalRef.key] = {
         nomorPenyewa: nomor,
         psUnit: psUnit,
@@ -708,6 +725,15 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
         kasPersen: 5,
         kasNominal: kasNominal,
         nominal: pendapatanBersih,
+
+     owner: psUnit === "D" ? "Aldo Laras & Adan Glena" : "",
+sistemBagiHasil: psUnit === "D" ? "50:50" : "",
+aldoNet: bagianAldoPS_D,
+glenaNet: bagianGlenaPS_D,
+
+
+
+        
         fotoUrl: fotoUrl || "",
         createdAt: waktu,
         createdBy: currentUser ? currentUser.role : "Admin",
@@ -1189,6 +1215,18 @@ function openMonthlyDetail(monthKey) {
       return total + getPendapatanBersih(rental);
     }, 0);
 
+    // TAMBAHAN KHUSUS PS D
+  const psDNet = rentals
+    .filter(function(rental) {
+      return rental.psUnit === "D";
+    })
+    .reduce(function(total, rental) {
+      return total + getPendapatanBersih(rental);
+    }, 0);
+
+  const bagianAldoPS_D = Math.floor(psDNet / 2);
+  const bagianGlenaPS_D = psDNet - bagianAldoPS_D;
+
   if (monthlyDetailTitle) {
     monthlyDetailTitle.textContent = formatMonthKey(monthKey);
   }
@@ -1201,13 +1239,13 @@ function openMonthlyDetail(monthKey) {
     detailIncome.textContent = formatRp(summary.income);
   }
 
-  if (detailGlenaNet) {
-    detailGlenaNet.textContent = formatRp(glenaNet);
-  }
+ if (detailGlenaNet) {
+  detailGlenaNet.textContent = formatRp(glenaNet + bagianGlenaPS_D);
+}
 
-  if (detailAldoNet) {
-    detailAldoNet.textContent = formatRp(aldoNet);
-  }
+if (detailAldoNet) {
+  detailAldoNet.textContent = formatRp(aldoNet + bagianAldoPS_D);
+}
 
   if (detailKas) {
     detailKas.textContent = formatRp(summary.kas);
