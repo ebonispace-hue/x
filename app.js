@@ -1458,12 +1458,31 @@ if (editForm) {
       updates["rentals/" + id + "/psUnit"] = psUnit;
       updates["rentals/" + id + "/durasi"] = durasi;
       updates["rentals/" + id + "/durasiUnit"] = durasiUnit;
-      updates["rentals/" + id + "/nominalKotor"] = nominalKotor;
-      updates["rentals/" + id + "/kasPersen"] = 5;
-      updates["rentals/" + id + "/kasNominal"] = kasNominal;
-      updates["rentals/" + id + "/nominal"] = pendapatanBersih;
-      updates["rentals/" + id + "/updatedAt"] = Date.now();
-      updates["rentals/" + id + "/updatedBy"] = currentUser.role;
+     updates["rentals/" + id + "/nominalKotor"] = nominalKotor;
+updates["rentals/" + id + "/kasPersen"] = 5;
+updates["rentals/" + id + "/kasNominal"] = kasNominal;
+updates["rentals/" + id + "/nominal"] = pendapatanBersih;
+
+// TAMBAHAN: sinkronkan pembagian PS D saat transaksi diedit
+const bagianAldoPS_D = psUnit === "D"
+  ? Math.floor(pendapatanBersih / 2)
+  : 0;
+
+const bagianGlenaPS_D = psUnit === "D"
+  ? pendapatanBersih - bagianAldoPS_D
+  : 0;
+
+updates["rentals/" + id + "/owner"] =
+  psUnit === "D" ? "Aldo Laras & Adan Glena" : "";
+
+updates["rentals/" + id + "/sistemBagiHasil"] =
+  psUnit === "D" ? "50:50" : "";
+
+updates["rentals/" + id + "/aldoNet"] = bagianAldoPS_D;
+updates["rentals/" + id + "/glenaNet"] = bagianGlenaPS_D;
+
+updates["rentals/" + id + "/updatedAt"] = Date.now();
+updates["rentals/" + id + "/updatedBy"] = currentUser.role;
 
       const relatedKas = allKasTransactions.find(function(kas) {
         return kas.rentalId === id;
