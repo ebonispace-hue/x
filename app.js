@@ -50,6 +50,9 @@ const fotoPreview = $("fotoPreview");
 const removeFoto = $("removeFoto");
 const submitBtn = $("submitBtn");
 
+/* =========================
+   MODAL PENGELUARAN
+========================= */
 const openExpenseModal = $("openExpenseModal");
 const expenseModal = $("expenseModal");
 const expenseModalOverlay = $("expenseModalOverlay");
@@ -59,6 +62,19 @@ const expenseForm = $("expenseForm");
 const expenseNominal = $("expenseNominal");
 const expenseKeterangan = $("expenseKeterangan");
 const saveExpenseBtn = $("saveExpenseBtn");
+
+/* =========================
+   MODAL LOAN
+========================= */
+const openLoanModal = $("openLoanModal");
+const loanModal = $("loanModal");
+const loanModalOverlay = $("loanModalOverlay");
+const closeLoanModal = $("closeLoanModal");
+const cancelLoan = $("cancelLoan");
+const loanForm = $("loanForm");
+const loanNominal = $("loanNominal");
+const loanKeterangan = $("loanKeterangan");
+const saveLoanBtn = $("saveLoanBtn");
 
 const editModal = $("editModal");
 const editForm = $("editForm");
@@ -537,16 +553,29 @@ function getKasVirtualHistory() {
 
 function renderKasSummary() {
   let kasMasukTersimpan = 0;
+  let kasLoan = 0;
   let kasKeluar = 0;
 
   allKasTransactions.forEach(function(kas) {
-    if (kas.jenis === "masuk") kasMasukTersimpan += Number(kas.nominal || 0);
-    if (kas.jenis === "keluar") kasKeluar += Number(kas.nominal || 0);
+    const nominal = Number(kas.nominal || 0);
+
+    if (kas.jenis === "masuk") {
+      kasMasukTersimpan += nominal;
+    }
+
+    if (kas.sumber === "loan") {
+      kasLoan += nominal;
+    }
+
+    if (kas.jenis === "keluar") {
+      kasKeluar += nominal;
+    }
   });
 
   const kasDariTransaksiLama = getKasFallbackFromRentals();
   const totalKasMasuk = kasMasukTersimpan + kasDariTransaksiLama;
 
+  setText("kasLoan", formatRp(kasLoan));
   setText("kasMasuk", formatRp(totalKasMasuk));
   setText("kasKeluar", formatRp(kasKeluar));
   setText("kasSaldo", formatRp(totalKasMasuk - kasKeluar));
@@ -973,7 +1002,7 @@ if (expenseForm) {
       .catch(function(error) {
         alert("Gagal menyimpan pengeluaran: " + error.message);
       })
-      .finally(function() {
+           .finally(function() {
         if (saveExpenseBtn) {
           saveExpenseBtn.disabled = false;
           saveExpenseBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Pengeluaran';
@@ -982,13 +1011,98 @@ if (expenseForm) {
   });
 }
 
+/* =========================
+   MODAL & SIMPAN LOAN
+========================= */
+
+function openLoanModalForm() {
+  if (!loanModal) return;
+
+  if (loanForm) loanForm.reset();
+  loanModal.classList.remove("hidden");
+}
+
+function closeLoanModalForm() {
+  if (loanModal) loanModal.classList.add("hidden");
+  if (loanForm) loanForm.reset();
+}
+
+if (openLoanModal) {
+  openLoanModal.addEventListener("click", openLoanModalForm);
+}
+
+if (closeLoanModal) {
+  closeLoanModal.addEventListener("click", closeLoanModalForm);
+}
+
+if (cancelLoan) {
+  cancelLoan.addEventListener("click", closeLoanModalForm);
+}
+
+if (loanModalOverlay) {
+  loanModalOverlay.addEventListener("click", closeLoanModalForm);
+}
+
+if (loanForm) {
+  loanForm.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    if (!firebaseReady) initFirebase();
+
+    if (!firebaseReady || !db) {
+      alert("Firebase belum siap: " + firebaseErrorMsg);
+      return;
+    }
+
+    const nominal = Number(loanNominal ? loanNominal.value : 0);
+    const keterangan = loanKeterangan ? loanKeterangan.value.trim() : "";
+
+    if (!nominal || nominal <= 0 || !keterangan) {
+      alert("Lengkapi nominal dan keterangan loan.");
+      return;
+    }
+
+    if (saveLoanBtn) {
+      saveLoanBtn.disabled = true;
+      saveLoanBtn.innerHTML =
+        '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    }
+
+    const loanRef = db.ref("kasTransactions").push();
+    const waktu = Date.now();
+
+    const dataLoan = {
+      jenis: "masuk",
+      nominal: nominal,
+      keterangan: "Loan: " + keterangan,
+      sumber: "loan",
+      createdAt: waktu,
+      createdBy: currentUser ? currentUser.role : "Admin",
+      monthKey: getMonthKey(waktu)
+    };
+
+    db.ref("kasTransactions/" + loanRef.key).set(dataLoan)
+      .then(function() {
+        closeLoanModalForm();
+        alert("Loan berhasil ditambahkan ke kas.");
+      })
+      .catch(function(error) {
+        console.error("Gagal simpan loan:", error);
+        alert("Gagal menyimpan loan: " + error.message);
+      })
+      .finally(function() {
+        if (saveLoanBtn) {
+          saveLoanBtn.disabled = false;
+          saveLoanBtn.innerHTML =
+            '<i class="fas fa-save"></i> Simpan Loan';
+        }
+      });
+  });
+}
+
 function renderExpenseHistory() {
   const history = $("expenseHistory");
   if (!history) return;
-
-  if (!allExpenses.length) {
-    history.innerHTML = '<p class="empty">Belum ada pengeluaran</p>';
-    return;
   }
 
   history.innerHTML = allExpenses.slice(0, 10).map(function(expense) {
