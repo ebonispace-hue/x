@@ -384,6 +384,18 @@ function updateDashboard() {
     totalAC += bagianGlena;
     totalB += bagianAldo;
   }
+   if (rental.psUnit === "E") {
+  const bagianGlena = rental.glenaNet !== undefined
+    ? Number(rental.glenaNet || 0)
+    : Math.round(gross * 0.30);
+
+  const bagianAldo = rental.aldoNet !== undefined
+    ? Number(rental.aldoNet || 0)
+    : gross - Math.round(gross * 0.30) - bagianGlena;
+
+  totalAC += bagianGlena;
+  totalB += bagianAldo;
+}
 });
 
   setText("totalAC", formatRp(totalAC));
@@ -432,7 +444,7 @@ function renderLatestHistory() {
           Number(rental.durasi || 0) + ' ' + escapeHtml(rental.durasiUnit || "jam") +
           ' · ' + formatDate(rental.createdAt) + '</div>' +
         '<div class="meta" style="color:#facc15; margin-top:4px;">' +
-          'Omset kotor · Kas 5%: ' + formatRp(getRentalKas(rental)) +
+        'Omset kotor · Kas: ' + formatRp(getRentalKas(rental)) +
         '</div>' +
       '</div>' +
       '<div class="item-amount">' + formatRp(getRentalGross(rental)) + '</div>' +
@@ -615,18 +627,27 @@ function renderKasHistory() {
       ? '<div class="meta" style="color:#facc15; margin-top:3px;">Kas sementara dari transaksi lama</div>'
       : "";
 
-    return '<div class="history-item">' +
-      '<div class="rank-badge ' + (masuk ? "gold" : "bronze") + '">' +
-        (masuk ? '<i class="fas fa-arrow-down"></i>' : '<i class="fas fa-arrow-up"></i>') +
-      '</div>' +
-      '<div class="item-info">' +
-        '<div class="nomor">' + (masuk ? "Kas Masuk" : "Kas Keluar") + '</div>' +
-        '<div class="meta">' + escapeHtml(kas.keterangan || "-") + ' · ' + formatDate(kas.createdAt) + '</div>' +
-        status +
-      '</div>' +
-      '<div class="item-amount" style="color:' + (masuk ? "#5eead4" : "#fb7185") + ';">' +
-        (masuk ? "+" : "-") + formatRp(kas.nominal) +
-      '</div>' +
+const labelKas = kas.sumber === "loan"
+  ? "Loan Masuk"
+  : (masuk ? "Kas Masuk" : "Kas Keluar");
+
+return '<div class="history-item">' +
+  '<div class="rank-badge ' + (masuk ? "gold" : "bronze") + '">' +
+    (masuk ? '<i class="fas fa-arrow-down"></i>' : '<i class="fas fa-arrow-up"></i>') +
+  '</div>' +
+  '<div class="item-info">' +
+    '<div class="nomor">' + labelKas + '</div>' +
+    '<div class="meta">' +
+      escapeHtml(kas.keterangan || "-") +
+      ' · ' + formatDate(kas.createdAt) +
+    '</div>' +
+    status +
+  '</div>' +
+  '<div class="item-amount" style="color:' +
+    (masuk ? "#5eead4" : "#fb7185") +
+    ';">' +
+    (masuk ? "+" : "-") + formatRp(kas.nominal) +
+  '</div>' +
       actions +
       '</div>';
   }).join("");
@@ -729,37 +750,69 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
     }
 
     function saveData(fotoUrl) {
-      const rentalRef = db.ref("rentals").push();
-      const kasRef = db.ref("kasTransactions").push();
-      const waktu = Date.now();
-      const kasNominal = Math.round(nominalKotor * KAS_PERCENT);
-      const pendapatanBersih = nominalKotor - kasNominal;
-      const monthKey = getMonthKey(waktu);
-      const updates = {};
+  const rentalRef = db.ref("rentals").push();
+  const kasRef = db.ref("kasTransactions").push();
+  const waktu = Date.now();
 
-      const bagianAldoPS_D = psUnit === "D"
-  ? Math.floor(pendapatanBersih / 2)
-  : 0;
+  let kasNominal = Math.round(nominalKotor * KAS_PERCENT);
+  let pendapatanBersih = nominalKotor - kasNominal;
+  let kasPersen = 5;
 
-const bagianGlenaPS_D = psUnit === "D"
-  ? pendapatanBersih - bagianAldoPS_D
-  : 0;
+  if (psUnit === "E") {
+    kasNominal = Math.round(nominalKotor * 0.30);
+    pendapatanBersih = nominalKotor - kasNominal;
+    kasPersen = 30;
+  }
 
-      updates["rentals/" + rentalRef.key] = {
-        nomorPenyewa: nomor,
-        psUnit: psUnit,
-        durasi: durasi,
-        durasiUnit: durasiUnit,
-        nominalKotor: nominalKotor,
-        kasPersen: 5,
-        kasNominal: kasNominal,
-        nominal: pendapatanBersih,
+  const monthKey = getMonthKey(waktu);
+  const updates = {};
 
-     owner: psUnit === "D" ? "Aldo Laras & Adan Glena" : "",
-sistemBagiHasil: psUnit === "D" ? "50:50" : "",
-aldoNet: bagianAldoPS_D,
-glenaNet: bagianGlenaPS_D,
+  const bagianAldoPS_D = psUnit === "D"
+    ? Math.floor(pendapatanBersih / 2)
+    : 0;
 
+  const bagianGlenaPS_D = psUnit === "D"
+    ? pendapatanBersih - bagianAldoPS_D
+    : 0;
+
+  const bagianGlenaPS_E = psUnit === "E"
+    ? Math.round(nominalKotor * 0.30)
+    : 0;
+
+  const bagianAldoPS_E = psUnit === "E"
+    ? nominalKotor - kasNominal - bagianGlenaPS_E
+    : 0;
+
+  updates["rentals/" + rentalRef.key] = {
+    nomorPenyewa: nomor,
+    psUnit: psUnit,
+    durasi: durasi,
+    durasiUnit: durasiUnit,
+    nominalKotor: nominalKotor,
+
+    kasPersen: kasPersen,
+    kasNominal: kasNominal,
+    nominal: pendapatanBersih,
+
+    owner:
+      psUnit === "D" || psUnit === "E"
+        ? "Aldo Laras & Adan Glena"
+        : "",
+
+    sistemBagiHasil:
+      psUnit === "D"
+        ? "50:50"
+        : (psUnit === "E" ? "30:30:40" : ""),
+
+    aldoNet:
+      psUnit === "D"
+        ? bagianAldoPS_D
+        : bagianAldoPS_E,
+
+    glenaNet:
+      psUnit === "D"
+        ? bagianGlenaPS_D
+        : bagianGlenaPS_E,
 
 
         
@@ -772,8 +825,8 @@ glenaNet: bagianGlenaPS_D,
       updates["kasTransactions/" + kasRef.key] = {
         jenis: "masuk",
         nominal: kasNominal,
-        persentase: 5,
-        keterangan: "Kas 5% dari sewa PS " + psUnit,
+       persentase: kasPersen,
+keterangan: "Kas dari sewa PS " + psUnit,
         sumber: "sewa_otomatis",
         rentalId: rentalRef.key,
         createdAt: waktu,
@@ -1103,7 +1156,7 @@ if (loanForm) {
 function renderExpenseHistory() {
   const history = $("expenseHistory");
   if (!history) return;
-  }
+  
 
   history.innerHTML = allExpenses.slice(0, 10).map(function(expense) {
     const actions = isMaster()
@@ -1183,9 +1236,15 @@ function getMonthlySummary(monthKey) {
     return total + getPendapatanBersih(rental);
   }, 0);
 
-  const kasMasuk = kas.reduce(function(total, item) {
-    return total + (item.jenis === "masuk" ? Number(item.nominal || 0) : 0);
-  }, 0);
+const kasMasuk = kas.reduce(function(total, item) {
+  const adalahKasSewa =
+    item.jenis === "masuk" &&
+    item.sumber !== "loan";
+
+  return total + (
+    adalahKasSewa ? Number(item.nominal || 0) : 0
+  );
+}, 0);
 
   const expenseTotal = expenses.reduce(function(total, expense) {
     return total + Number(expense.nominal || 0);
@@ -1341,6 +1400,34 @@ function openMonthlyDetail(monthKey) {
   const bagianAldoPS_D = Math.floor(psDNet / 2);
   const bagianGlenaPS_D = psDNet - bagianAldoPS_D;
 
+  const psEGlenaNet = rentals
+  .filter(function(rental) {
+    return rental.psUnit === "E";
+  })
+  .reduce(function(total, rental) {
+    if (rental.glenaNet !== undefined) {
+      return total + Number(rental.glenaNet || 0);
+    }
+
+    return total + Math.round(getRentalGross(rental) * 0.30);
+  }, 0);
+
+const psEAldoNet = rentals
+  .filter(function(rental) {
+    return rental.psUnit === "E";
+  })
+  .reduce(function(total, rental) {
+    if (rental.aldoNet !== undefined) {
+      return total + Number(rental.aldoNet || 0);
+    }
+
+    const gross = getRentalGross(rental);
+    const kas = Math.round(gross * 0.30);
+    const glena = Math.round(gross * 0.30);
+
+    return total + gross - kas - glena;
+  }, 0);
+
   if (monthlyDetailTitle) {
     monthlyDetailTitle.textContent = formatMonthKey(monthKey);
   }
@@ -1353,12 +1440,16 @@ function openMonthlyDetail(monthKey) {
     detailIncome.textContent = formatRp(summary.income);
   }
 
- if (detailGlenaNet) {
-  detailGlenaNet.textContent = formatRp(glenaNet + bagianGlenaPS_D);
+if (detailGlenaNet) {
+  detailGlenaNet.textContent = formatRp(
+    glenaNet + bagianGlenaPS_D + psEGlenaNet
+  );
 }
 
 if (detailAldoNet) {
-  detailAldoNet.textContent = formatRp(aldoNet + bagianAldoPS_D);
+  detailAldoNet.textContent = formatRp(
+    aldoNet + bagianAldoPS_D + psEAldoNet
+  );
 }
 
   if (detailKas) {
@@ -1459,13 +1550,17 @@ function renderMonthlyKasList(kas) {
   monthlyKasDetailList.innerHTML = kas.map(function(item) {
     const masuk = item.jenis === "masuk";
 
+    const labelKas = item.sumber === "loan"
+      ? "Loan Masuk"
+      : (masuk ? "Kas Masuk" : "Kas Keluar");
+
     return '<div class="month-detail-item">' +
       '<div class="month-detail-left">' +
         '<span class="month-detail-title">' +
           '<i class="fas ' +
           (masuk ? "fa-arrow-down" : "fa-arrow-up") +
           '"></i> ' +
-          (masuk ? "Kas Masuk" : "Kas Keluar") +
+          labelKas +
         '</span>' +
         '<span class="month-detail-meta">' +
           escapeHtml(item.keterangan || "-") +
@@ -1482,7 +1577,6 @@ function renderMonthlyKasList(kas) {
       '</div>';
   }).join("");
 }
-
 if (closeMonthlyDetailModal) {
   closeMonthlyDetailModal.addEventListener("click", closeMonthlyDetail);
 }
@@ -1560,8 +1654,15 @@ if (editForm) {
       return;
     }
 
-    const kasNominal = Math.round(nominalKotor * KAS_PERCENT);
-    const pendapatanBersih = nominalKotor - kasNominal;
+   let kasNominal = Math.round(nominalKotor * KAS_PERCENT);
+let pendapatanBersih = nominalKotor - kasNominal;
+let kasPersen = 5;
+
+if (psUnit === "E") {
+  kasNominal = Math.round(nominalKotor * 0.30);
+  pendapatanBersih = nominalKotor - kasNominal;
+  kasPersen = 30;
+}
 
     if (saveEditBtn) saveEditBtn.disabled = true;
 
@@ -1573,7 +1674,7 @@ if (editForm) {
       updates["rentals/" + id + "/durasi"] = durasi;
       updates["rentals/" + id + "/durasiUnit"] = durasiUnit;
      updates["rentals/" + id + "/nominalKotor"] = nominalKotor;
-updates["rentals/" + id + "/kasPersen"] = 5;
+updates["rentals/" + id + "/kasPersen"] = kasPersen;
 updates["rentals/" + id + "/kasNominal"] = kasNominal;
 updates["rentals/" + id + "/nominal"] = pendapatanBersih;
 
@@ -1585,7 +1686,14 @@ const bagianAldoPS_D = psUnit === "D"
 const bagianGlenaPS_D = psUnit === "D"
   ? pendapatanBersih - bagianAldoPS_D
   : 0;
+const bagianGlenaPS_E = psUnit === "E"
+  ? Math.round(nominalKotor * 0.30)
+  : 0;
 
+const bagianAldoPS_E = psUnit === "E"
+  ? nominalKotor - kasNominal - bagianGlenaPS_E
+  : 0;
+      
 updates["rentals/" + id + "/owner"] =
   psUnit === "D" ? "Aldo Laras & Adan Glena" : "";
 
@@ -1593,7 +1701,21 @@ updates["rentals/" + id + "/sistemBagiHasil"] =
   psUnit === "D" ? "50:50" : "";
 
 updates["rentals/" + id + "/aldoNet"] = bagianAldoPS_D;
-updates["rentals/" + id + "/glenaNet"] = bagianGlenaPS_D;
+updates["rentals/" + id + "/glenaNet"] = bagianGlenaPS_D
+
+      if (psUnit === "E") {
+  updates["rentals/" + id + "/owner"] =
+    "Aldo Laras & Adan Glena";
+
+  updates["rentals/" + id + "/sistemBagiHasil"] =
+    "30:30:40";
+
+  updates["rentals/" + id + "/glenaNet"] =
+    bagianGlenaPS_E;
+
+  updates["rentals/" + id + "/aldoNet"] =
+    bagianAldoPS_E;
+}
 
 updates["rentals/" + id + "/updatedAt"] = Date.now();
 updates["rentals/" + id + "/updatedBy"] = currentUser.role;
@@ -1604,6 +1726,11 @@ updates["rentals/" + id + "/updatedBy"] = currentUser.role;
 
       if (relatedKas) {
         updates["kasTransactions/" + relatedKas.id + "/nominal"] = kasNominal;
+        if (psUnit === "E") {
+  updates["kasTransactions/" + relatedKas.id + "/persentase"] = 30;
+  updates["kasTransactions/" + relatedKas.id + "/keterangan"] =
+    "Kas dari sewa PS E";
+}
         updates["kasTransactions/" + relatedKas.id + "/keterangan"] = "Kas 5% dari sewa PS " + psUnit;
         updates["kasTransactions/" + relatedKas.id + "/updatedAt"] = Date.now();
         updates["kasTransactions/" + relatedKas.id + "/updatedBy"] = currentUser.role;
@@ -1837,11 +1964,12 @@ if (logoutBtn) {
     if (dashboardScreen) dashboardScreen.classList.add("hidden");
     if (loginScreen) loginScreen.classList.remove("hidden");
 
-    closeEditModal();
-    closeExpenseModalForm();
-    closeEditExpenseModalForm();
-    closeEditKasModalForm();
+closeEditModal();
+closeExpenseModalForm();
+closeLoanModalForm();
+closeEditExpenseModalForm();
 
+    
     if (pinInput) pinInput.focus();
   });
 }
