@@ -126,20 +126,25 @@
 </section>
 
       <!-- KAS -->
-      <section class="kas-section">
-        <div class="section-heading">
-          <div>
-            <h2>
-              <i class="fas fa-wallet"></i>
-              Kas Usaha
-            </h2>
+  <section class="kas-section">
+  <div class="section-heading">
+    <div>
+      <h2>
+        <i class="fas fa-wallet"></i>
+        Kas Usaha
+      </h2>
 
-            <p>
-              Kas 5% masuk otomatis dari setiap sewa.
-              Pengeluaran mengurangi saldo kas.
-            </p>
-          </div>
-        </div>
+    <p>
+  Kas masuk dari transaksi sewa dan loan.
+  Pengeluaran mengurangi saldo kas.
+</p>
+    </div>
+
+    <button type="button" id="openLoanModal" class="btn-primary">
+      <i class="fas fa-hand-holding-dollar"></i>
+      Tambah Loan
+    </button>
+  </div>
         <div class="history-card" style="margin-top:16px;">
   <h3>
     <i class="fas fa-receipt"></i>
@@ -151,6 +156,17 @@
   </div>
 </div>
         <div class="kas-grid">
+
+          <div class="total-card kas-loan-card">
+  <div class="total-icon">
+    <i class="fas fa-hand-holding-dollar"></i>
+  </div>
+
+  <div class="total-info">
+    <span class="total-label">Total Loan Masuk</span>
+    <span class="total-value" id="kasLoan">Rp 0</span>
+  </div>
+</div>
           <div class="total-card kas-saldo-card">
             <div class="total-icon">
               <i class="fas fa-wallet"></i>
@@ -212,10 +228,11 @@
 
   <select id="psUnit" required>
     <option value="">-- Pilih Unit --</option>
-    <option value="A">PS A</option>
-    <option value="B">PS B</option>
-    <option value="C">PS C</option>
-    <option value="D">PS D — Aldo Laras &amp; Adan Glena</option>
+<option value="A">PS A</option>
+<option value="B">PS B</option>
+<option value="C">PS C</option>
+<option value="D">PS D</option>
+<option value="E">PS E</option>
   </select>
 </div>
 
@@ -293,11 +310,11 @@
 
           </div>
 
-          <div class="form-note">
-            <i class="fas fa-circle-info"></i>
-            Kas otomatis sebesar 5% dari nominal sewa.
-            Panel omset menampilkan pendapatan setelah potongan kas.
-          </div>
+        <div class="form-note">
+  <i class="fas fa-circle-info"></i>
+  Kas otomatis masuk dari setiap transaksi sewa.
+  Panel omset menampilkan pendapatan setelah pembagian kas.
+</div>
 
           <button type="submit" class="btn-primary btn-submit" id="submitBtn">
             <i class="fas fa-save"></i>
@@ -429,7 +446,8 @@
             </div>
 
             <div class="total-info">
-              <span class="total-label">Kas 5%</span>
+            <span class="total-label">Kas dari Sewa</span>
+
               <span class="total-value" id="monthlyKas">Rp 0</span>
             </div>
           </div>
@@ -532,6 +550,69 @@
     </div>
   </div>
 
+  <!-- MODAL LOAN -->
+  <div id="loanModal" class="modal hidden">
+    <div class="modal-overlay" id="loanModalOverlay"></div>
+
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>
+          <i class="fas fa-hand-holding-dollar"></i>
+          Tambah Loan
+        </h3>
+
+        <button type="button" id="closeLoanModal" class="btn-icon">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="loanForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="loanNominal">Nominal Loan (Rp)</label>
+
+            <input
+              type="number"
+              id="loanNominal"
+              min="1"
+              placeholder="Contoh: 100000"
+              required
+            >
+          </div>
+
+          <div class="form-group full-width">
+            <label for="loanKeterangan">Keterangan Loan</label>
+
+            <textarea
+              id="loanKeterangan"
+              rows="4"
+              maxlength="300"
+              placeholder="Contoh: Tambahan modal kas."
+              required
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="form-note">
+          <i class="fas fa-circle-info"></i>
+          Loan menambah saldo kas dan tidak dihitung sebagai omzet sewa.
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelLoan" class="btn-secondary">
+            Batal
+          </button>
+
+          <button type="submit" id="saveLoanBtn" class="btn-primary">
+            <i class="fas fa-save"></i>
+            Simpan Loan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
   <!-- EDIT MODAL -->
   <div id="editModal" class="modal hidden">
     <div class="modal-overlay" id="modalOverlay"></div>
@@ -561,11 +642,12 @@
           <div class="form-group">
             <label for="editPsUnit">Unit PS</label>
 
-   <select id="editPsUnit" required>
+<select id="editPsUnit" required>
   <option value="A">PS A</option>
   <option value="B">PS B</option>
   <option value="C">PS C</option>
   <option value="D">PS D — Aldo Laras &amp; Adan Glena</option>
+  <option value="E">PS E</option>
   <option value="TV_A">TV A</option>
   <option value="TV_B">TV B</option>
 </select>
