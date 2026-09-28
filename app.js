@@ -212,6 +212,13 @@ function formatMonthKey(monthKey) {
   }).format(new Date(Number(parts[0]), Number(parts[1]) - 1, 1));
 }
 
+/* Unit dengan sistem bagi hasil 30:30:40 (Kas 30% : Glena 30% : Aldo 40%) */
+const UNIT_30_30_40 = ["E", "F", "G"];
+
+function isUnit303040(unit) {
+  return UNIT_30_30_40.indexOf(unit) !== -1;
+}
+
 function isMaster() {
   return currentUser && currentUser.role === "Master";
 }
@@ -411,7 +418,7 @@ function updateDashboard() {
     totalAC += bagianGlena;
     totalB += bagianAldo;
   }
-   if (rental.psUnit === "E") {
+   if (isUnit303040(rental.psUnit)) {
   const bagianGlena = rental.glenaNet !== undefined
     ? Number(rental.glenaNet || 0)
     : Math.round(gross * 0.30);
@@ -1157,7 +1164,7 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
   let pendapatanBersih = nominalKotor - kasNominal;
   let kasPersen = 5;
 
-  if (psUnit === "E") {
+  if (isUnit303040(psUnit)) {
     kasNominal = Math.round(nominalKotor * 0.30);
     pendapatanBersih = nominalKotor - kasNominal;
     kasPersen = 30;
@@ -1174,11 +1181,11 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
     ? pendapatanBersih - bagianAldoPS_D
     : 0;
 
-  const bagianGlenaPS_E = psUnit === "E"
+  const bagianGlenaPS_E = isUnit303040(psUnit)
     ? Math.round(nominalKotor * 0.30)
     : 0;
 
-  const bagianAldoPS_E = psUnit === "E"
+  const bagianAldoPS_E = isUnit303040(psUnit)
     ? nominalKotor - kasNominal - bagianGlenaPS_E
     : 0;
 
@@ -1194,14 +1201,14 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
     nominal: pendapatanBersih,
 
     owner:
-      psUnit === "D" || psUnit === "E"
+      psUnit === "D" || isUnit303040(psUnit)
         ? "Aldo Laras & Adan Glena"
         : "",
 
     sistemBagiHasil:
       psUnit === "D"
         ? "50:50"
-        : (psUnit === "E" ? "30:30:40" : ""),
+        : (isUnit303040(psUnit) ? "30:30:40" : ""),
 
     aldoNet:
       psUnit === "D"
@@ -1747,7 +1754,7 @@ function getOwnerSplit(rentals) {
       aldo += getPendapatanBersih(rental);
     } else if (unit === "D") {
       psDNet += getPendapatanBersih(rental);
-    } else if (unit === "E") {
+    } else if (isUnit303040(unit)) {
       const g = rental.glenaNet !== undefined
         ? Number(rental.glenaNet || 0)
         : Math.round(rentalGross * 0.30);
@@ -2401,7 +2408,7 @@ if (editForm) {
 let pendapatanBersih = nominalKotor - kasNominal;
 let kasPersen = 5;
 
-if (psUnit === "E") {
+if (isUnit303040(psUnit)) {
   kasNominal = Math.round(nominalKotor * 0.30);
   pendapatanBersih = nominalKotor - kasNominal;
   kasPersen = 30;
@@ -2429,11 +2436,11 @@ const bagianAldoPS_D = psUnit === "D"
 const bagianGlenaPS_D = psUnit === "D"
   ? pendapatanBersih - bagianAldoPS_D
   : 0;
-const bagianGlenaPS_E = psUnit === "E"
+const bagianGlenaPS_E = isUnit303040(psUnit)
   ? Math.round(nominalKotor * 0.30)
   : 0;
 
-const bagianAldoPS_E = psUnit === "E"
+const bagianAldoPS_E = isUnit303040(psUnit)
   ? nominalKotor - kasNominal - bagianGlenaPS_E
   : 0;
       
@@ -2446,7 +2453,7 @@ updates["rentals/" + id + "/sistemBagiHasil"] =
 updates["rentals/" + id + "/aldoNet"] = bagianAldoPS_D;
 updates["rentals/" + id + "/glenaNet"] = bagianGlenaPS_D
 
-      if (psUnit === "E") {
+      if (isUnit303040(psUnit)) {
   updates["rentals/" + id + "/owner"] =
     "Aldo Laras & Adan Glena";
 
