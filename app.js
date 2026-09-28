@@ -76,6 +76,33 @@ const loanNominal = $("loanNominal");
 const loanKeterangan = $("loanKeterangan");
 const saveLoanBtn = $("saveLoanBtn");
 
+/* =========================
+   MODAL BAYAR LOAN
+========================= */
+const openPayLoanModal = $("openPayLoanModal");
+const payLoanModal = $("payLoanModal");
+const payLoanModalOverlay = $("payLoanModalOverlay");
+const closePayLoanModal = $("closePayLoanModal");
+const cancelPayLoan = $("cancelPayLoan");
+const payLoanForm = $("payLoanForm");
+const payLoanSelect = $("payLoanSelect");
+const payLoanNominal = $("payLoanNominal");
+const payLoanSaldo = $("payLoanSaldo");
+const payLoanInfo = $("payLoanInfo");
+const savePayLoanBtn = $("savePayLoanBtn");
+const autoPayLoanBtn = $("autoPayLoanBtn");
+
+/* =========================
+   HISTORY KAS & DOWNLOAD
+========================= */
+const toggleKasOrder = $("toggleKasOrder");
+const kasOrderLabel = $("kasOrderLabel");
+const downloadKasHistory = $("downloadKasHistory");
+const downloadSelectedMonth = $("downloadSelectedMonth");
+const downloadMonthlyDetail = $("downloadMonthlyDetail");
+let kasOrderOldestFirst = true;
+let currentDetailMonthKey = "";
+
 const editModal = $("editModal");
 const editForm = $("editForm");
 const closeModal = $("closeModal");
@@ -563,6 +590,74 @@ function getKasVirtualHistory() {
     });
 }
 
+function getKasLabel(kas) {
+  if (kas.sumber === "loan") return "Loan Masuk";
+  if (kas.sumber === "bayar_loan") return "Bayar Loan";
+  return kas.jenis === "masuk" ? "Kas Masuk" : "Kas Keluar";
+}
+
+function sortByCreatedAsc(a, b) {
+  const diff = Number(a.createdAt || 0) - Number(b.createdAt || 0);
+  if (diff !== 0) return diff;
+  return String(a.id || "").localeCompare(String(b.id || ""));
+}
+
+/* Semua transaksi kas (termasuk kas virtual dari transaksi lama),
+   urut dari yang PALING AWAL, lengkap dengan saldo setelah transaksi. */
+function getKasLedger() {
+  let saldo = 0;
+
+  return allKasTransactions
+    .concat(getKasVirtualHistory())
+    .sort(sortByCreatedAsc)
+    .map(function(kas, index) {
+      const nominal = Number(kas.nominal || 0);
+      saldo += kas.jenis === "masuk" ? nominal : -nominal;
+
+      return Object.assign({}, kas, {
+        urutan: index + 1,
+        saldoSetelah: saldo
+      });
+    });
+}
+
+function getSaldoKas() {
+  const ledger = getKasLedger();
+  return ledger.length ? ledger[ledger.length - 1].saldoSetelah : 0;
+}
+
+/* Status setiap loan: total, sudah dibayar, sisa */
+function getLoanStatuses() {
+  const paidMap = {};
+
+  allKasTransactions.forEach(function(kas) {
+    if (kas.sumber === "bayar_loan" && kas.loanId) {
+      paidMap[kas.loanId] = (paidMap[kas.loanId] || 0) + Number(kas.nominal || 0);
+    }
+  });
+
+  return allKasTransactions
+    .filter(function(kas) {
+      return kas.sumber === "loan";
+    })
+    .sort(sortByCreatedAsc)
+    .map(function(loan) {
+      const total = Number(loan.nominal || 0);
+      const dibayar = paidMap[loan.id] || 0;
+      const sisa = Math.max(0, total - dibayar);
+
+      return {
+        id: loan.id,
+        loan: loan,
+        keterangan: String(loan.keterangan || "Loan").replace(/^Loan:\s*/, ""),
+        total: total,
+        dibayar: dibayar,
+        sisa: sisa,
+        lunas: sisa <= 0
+      };
+    });
+}
+
 function renderKasSummary() {
   let kasMasukTersimpan = 0;
   let kasLoan = 0;
@@ -587,30 +682,47 @@ function renderKasSummary() {
   const kasDariTransaksiLama = getKasFallbackFromRentals();
   const totalKasMasuk = kasMasukTersimpan + kasDariTransaksiLama;
 
+  const loans = getLoanStatuses();
+  const loanDibayar = loans.reduce(function(t, l) { return t + l.dibayar; }, 0);
+  const loanSisa = loans.reduce(function(t, l) { return t + l.sisa; }, 0);
+
   setText("kasLoan", formatRp(kasLoan));
+  setText("kasLoanSisa", formatRp(loanSisa));
+  setText("kasLoanDibayar", "Sudah dibayar " + formatRp(loanDibayar));
   setText("kasMasuk", formatRp(totalKasMasuk));
   setText("kasKeluar", formatRp(kasKeluar));
   setText("kasSaldo", formatRp(totalKasMasuk - kasKeluar));
 
   renderKasHistory();
+  renderLoanList();
 }
 
 function renderKasHistory() {
   const history = $("kasHistory");
   if (!history) return;
 
-  const allKasForDisplay = allKasTransactions
-    .concat(getKasVirtualHistory())
-    .sort(function(a, b) {
-      return Number(b.createdAt || 0) - Number(a.createdAt || 0);
-    });
+  const ledger = getKasLedger();
 
-  if (!allKasForDisplay.length) {
+  if (kasOrderLabel) {
+    kasOrderLabel.textContent = kasOrderOldestFirst ? "Terlama dulu" : "Terbaru dulu";
+  }
+
+  const info = $("kasHistoryInfo");
+  if (info) {
+    info.textContent = ledger.length
+      ? ledger.length + " transaksi sejak " + formatDate(ledger[0].createdAt) +
+        ". Saldo di kanan = saldo kas setelah transaksi tersebut."
+      : "Semua transaksi kas sejak awal, lengkap dengan saldo setelah transaksi.";
+  }
+
+  if (!ledger.length) {
     history.innerHTML = '<p class="empty">Belum ada transaksi kas</p>';
     return;
   }
 
-  history.innerHTML = allKasForDisplay.slice(0, 10).map(function(kas) {
+  const rows = kasOrderOldestFirst ? ledger : ledger.slice().reverse();
+
+  history.innerHTML = rows.map(function(kas) {
     const masuk = kas.jenis === "masuk";
     const actions = isMaster() && !kas.virtual
       ? '<div class="item-actions">' +
@@ -627,45 +739,332 @@ function renderKasHistory() {
       ? '<div class="meta" style="color:#facc15; margin-top:3px;">Kas sementara dari transaksi lama</div>'
       : "";
 
-const labelKas = kas.sumber === "loan"
-  ? "Loan Masuk"
-  : (masuk ? "Kas Masuk" : "Kas Keluar");
-
-return '<div class="history-item">' +
-  '<div class="rank-badge ' + (masuk ? "gold" : "bronze") + '">' +
-    (masuk ? '<i class="fas fa-arrow-down"></i>' : '<i class="fas fa-arrow-up"></i>') +
-  '</div>' +
-  '<div class="item-info">' +
-    '<div class="nomor">' + labelKas + '</div>' +
-    '<div class="meta">' +
-      escapeHtml(kas.keterangan || "-") +
-      ' · ' + formatDate(kas.createdAt) +
-    '</div>' +
-    status +
-  '</div>' +
-  '<div class="item-amount" style="color:' +
-    (masuk ? "#5eead4" : "#fb7185") +
-    ';">' +
-    (masuk ? "+" : "-") + formatRp(kas.nominal) +
-  '</div>' +
+    return '<div class="history-item">' +
+      '<div class="kas-row-number">#' + kas.urutan + '</div>' +
+      '<div class="rank-badge ' + (masuk ? "gold" : "bronze") + '">' +
+        (masuk ? '<i class="fas fa-arrow-down"></i>' : '<i class="fas fa-arrow-up"></i>') +
+      '</div>' +
+      '<div class="item-info">' +
+        '<div class="nomor">' + getKasLabel(kas) + '</div>' +
+        '<div class="meta">' +
+          escapeHtml(kas.keterangan || "-") +
+          ' · ' + formatDate(kas.createdAt) +
+        '</div>' +
+        status +
+      '</div>' +
+      '<div class="kas-amount-col">' +
+        '<div class="item-amount" style="color:' + (masuk ? "#5eead4" : "#fb7185") + ';">' +
+          (masuk ? "+" : "-") + formatRp(kas.nominal) +
+        '</div>' +
+        '<span class="kas-saldo-after">Saldo ' + formatRp(kas.saldoSetelah) + '</span>' +
+      '</div>' +
       actions +
       '</div>';
   }).join("");
-
-  if (isMaster()) {
-    history.querySelectorAll(".btn-edit-kas").forEach(function(button) {
-      button.addEventListener("click", function() {
-        openEditKasModal(button.dataset.id);
-      });
-    });
-
-    history.querySelectorAll(".btn-delete-kas").forEach(function(button) {
-      button.addEventListener("click", function() {
-        deleteKasTransaction(button.dataset.id);
-      });
-    });
-  }
 }
+
+/* Event delegation: tidak perlu pasang listener ulang setiap render */
+(function setupKasHistoryEvents() {
+  const history = $("kasHistory");
+  if (!history) return;
+
+  history.addEventListener("click", function(event) {
+    const editBtn = event.target.closest(".btn-edit-kas");
+    const deleteBtn = event.target.closest(".btn-delete-kas");
+
+    if (editBtn) openEditKasModal(editBtn.dataset.id);
+    if (deleteBtn) deleteKasTransaction(deleteBtn.dataset.id);
+  });
+})();
+
+if (toggleKasOrder) {
+  toggleKasOrder.addEventListener("click", function() {
+    kasOrderOldestFirst = !kasOrderOldestFirst;
+    renderKasHistory();
+  });
+}
+
+/* =========================
+   DAFTAR & PEMBAYARAN LOAN
+========================= */
+function renderLoanList() {
+  const list = $("loanList");
+  if (!list) return;
+
+  const loans = getLoanStatuses();
+  const adaSisa = loans.some(function(l) { return !l.lunas; });
+
+  if (autoPayLoanBtn) autoPayLoanBtn.disabled = !adaSisa;
+  if (openPayLoanModal) openPayLoanModal.disabled = !adaSisa;
+
+  if (!loans.length) {
+    list.innerHTML = '<p class="empty">Belum ada loan</p>';
+    return;
+  }
+
+  list.innerHTML = loans.slice().reverse().map(function(item) {
+    const persen = item.total > 0 ? Math.min(100, Math.round(item.dibayar / item.total * 100)) : 100;
+
+    return '<div class="history-item">' +
+      '<div class="rank-badge ' + (item.lunas ? "gold" : "bronze") + '">' +
+        '<i class="fas ' + (item.lunas ? "fa-check" : "fa-hand-holding-dollar") + '"></i>' +
+      '</div>' +
+      '<div class="item-info">' +
+        '<div class="nomor">' + escapeHtml(item.keterangan) +
+          '<span class="loan-badge ' + (item.lunas ? "lunas" : "belum") + '">' +
+            (item.lunas ? "LUNAS" : "BELUM LUNAS") +
+          '</span>' +
+        '</div>' +
+        '<div class="meta">' +
+          formatDate(item.loan.createdAt) +
+          ' · Dibayar ' + formatRp(item.dibayar) + ' dari ' + formatRp(item.total) +
+        '</div>' +
+        '<div class="loan-progress"><span style="width:' + persen + '%"></span></div>' +
+      '</div>' +
+      '<div class="kas-amount-col">' +
+        '<div class="item-amount">' + formatRp(item.sisa) + '</div>' +
+        '<span class="kas-saldo-after">sisa</span>' +
+      '</div>' +
+      (item.lunas
+        ? ""
+        : '<div class="item-actions">' +
+            '<button class="btn-action btn-pay-loan" data-id="' + item.id + '" title="Bayar dari kas">' +
+              '<i class="fas fa-money-check-dollar"></i>' +
+            '</button>' +
+          '</div>') +
+      '</div>';
+  }).join("");
+}
+
+(function setupLoanListEvents() {
+  const list = $("loanList");
+  if (!list) return;
+
+  list.addEventListener("click", function(event) {
+    const payBtn = event.target.closest(".btn-pay-loan");
+    if (payBtn) openPayLoanModalForm(payBtn.dataset.id);
+  });
+})();
+
+function updatePayLoanInfo() {
+  if (!payLoanSelect || !payLoanInfo) return;
+
+  const loan = getLoanStatuses().find(function(l) {
+    return l.id === payLoanSelect.value;
+  });
+
+  const saldo = getSaldoKas();
+
+  if (payLoanSaldo) payLoanSaldo.textContent = formatRp(saldo);
+
+  if (!loan) {
+    payLoanInfo.innerHTML = '<i class="fas fa-circle-info"></i> Pilih loan yang akan dibayar.';
+    return;
+  }
+
+  const maxBayar = Math.max(0, Math.min(loan.sisa, saldo));
+
+  if (payLoanNominal) payLoanNominal.max = String(maxBayar || "");
+
+  payLoanInfo.innerHTML = '<i class="fas fa-circle-info"></i> ' +
+    'Sisa loan ' + formatRp(loan.sisa) + '. Maksimal bisa dibayar sekarang ' + formatRp(maxBayar) +
+    ' (dibatasi saldo kas). Nominal otomatis dipotong dari saldo kas.';
+}
+
+function openPayLoanModalForm(loanId) {
+  if (!payLoanModal || !payLoanSelect) return;
+
+  const outstanding = getLoanStatuses().filter(function(l) {
+    return !l.lunas;
+  });
+
+  if (!outstanding.length) {
+    alert("Semua loan sudah lunas.");
+    return;
+  }
+
+  payLoanSelect.innerHTML = outstanding.map(function(l) {
+    return '<option value="' + l.id + '">' +
+      escapeHtml(l.keterangan) + ' — sisa ' + formatRp(l.sisa) +
+      '</option>';
+  }).join("");
+
+  const target = outstanding.find(function(l) { return l.id === loanId; }) || outstanding[0];
+  payLoanSelect.value = target.id;
+
+  const saldo = getSaldoKas();
+  if (payLoanNominal) payLoanNominal.value = Math.max(0, Math.min(target.sisa, saldo)) || "";
+
+  updatePayLoanInfo();
+  payLoanModal.classList.remove("hidden");
+}
+
+function closePayLoanModalForm() {
+  if (payLoanModal) payLoanModal.classList.add("hidden");
+  if (payLoanForm) payLoanForm.reset();
+}
+
+if (openPayLoanModal) openPayLoanModal.addEventListener("click", function() { openPayLoanModalForm(""); });
+if (closePayLoanModal) closePayLoanModal.addEventListener("click", closePayLoanModalForm);
+if (cancelPayLoan) cancelPayLoan.addEventListener("click", closePayLoanModalForm);
+if (payLoanModalOverlay) payLoanModalOverlay.addEventListener("click", closePayLoanModalForm);
+
+if (payLoanSelect) {
+  payLoanSelect.addEventListener("change", function() {
+    const loan = getLoanStatuses().find(function(l) { return l.id === payLoanSelect.value; });
+    if (loan && payLoanNominal) {
+      payLoanNominal.value = Math.max(0, Math.min(loan.sisa, getSaldoKas())) || "";
+    }
+    updatePayLoanInfo();
+  });
+}
+
+function buildLoanPaymentUpdate(updates, loanStatus, nominal, waktu, catatan) {
+  const ref = db.ref("kasTransactions").push();
+
+  updates["kasTransactions/" + ref.key] = {
+    jenis: "keluar",
+    nominal: nominal,
+    keterangan: "Bayar loan: " + loanStatus.keterangan + (catatan ? " (" + catatan + ")" : ""),
+    sumber: "bayar_loan",
+    loanId: loanStatus.id,
+    createdAt: waktu,
+    createdBy: currentUser ? currentUser.role : "Admin",
+    monthKey: getMonthKey(waktu)
+  };
+}
+
+if (payLoanForm) {
+  payLoanForm.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    if (!firebaseReady) initFirebase();
+    if (!firebaseReady || !db) {
+      alert("Firebase belum siap: " + firebaseErrorMsg);
+      return;
+    }
+
+    const loan = getLoanStatuses().find(function(l) {
+      return l.id === (payLoanSelect ? payLoanSelect.value : "");
+    });
+    const nominal = Number(payLoanNominal ? payLoanNominal.value : 0);
+    const saldo = getSaldoKas();
+
+    if (!loan) {
+      alert("Pilih loan yang akan dibayar.");
+      return;
+    }
+
+    if (!nominal || nominal <= 0) {
+      alert("Isi nominal pembayaran.");
+      return;
+    }
+
+    if (nominal > loan.sisa) {
+      alert("Nominal melebihi sisa loan (" + formatRp(loan.sisa) + ").");
+      return;
+    }
+
+    if (nominal > saldo) {
+      alert("Saldo kas tidak cukup.\n\nSaldo kas: " + formatRp(saldo) + "\nNominal: " + formatRp(nominal));
+      return;
+    }
+
+    if (savePayLoanBtn) {
+      savePayLoanBtn.disabled = true;
+      savePayLoanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    }
+
+    const updates = {};
+    const lunas = nominal >= loan.sisa;
+    buildLoanPaymentUpdate(updates, loan, nominal, Date.now(), lunas ? "lunas" : "cicilan");
+
+    db.ref().update(updates)
+      .then(function() {
+        closePayLoanModalForm();
+        alert(
+          "Pembayaran loan berhasil, diambil dari kas.\n\n" +
+          "Dibayar: " + formatRp(nominal) + "\n" +
+          "Sisa loan: " + formatRp(loan.sisa - nominal) + "\n" +
+          "Saldo kas sekarang: " + formatRp(saldo - nominal)
+        );
+      })
+      .catch(function(error) {
+        alert("Gagal membayar loan: " + error.message);
+      })
+      .finally(function() {
+        if (savePayLoanBtn) {
+          savePayLoanBtn.disabled = false;
+          savePayLoanBtn.innerHTML = '<i class="fas fa-check"></i> Bayar dari Kas';
+        }
+      });
+  });
+}
+
+/* Bayar otomatis: pakai saldo kas yang ada untuk melunasi loan terlama dulu */
+function autoPayLoansFromKas() {
+  if (!firebaseReady) initFirebase();
+  if (!firebaseReady || !db) {
+    alert("Firebase belum siap: " + firebaseErrorMsg);
+    return;
+  }
+
+  const outstanding = getLoanStatuses().filter(function(l) { return !l.lunas; });
+  let saldo = getSaldoKas();
+
+  if (!outstanding.length) {
+    alert("Semua loan sudah lunas.");
+    return;
+  }
+
+  if (saldo <= 0) {
+    alert("Saldo kas kosong, belum bisa bayar loan.");
+    return;
+  }
+
+  const rencana = [];
+
+  outstanding.forEach(function(loan) {
+    if (saldo <= 0) return;
+    const bayar = Math.min(loan.sisa, saldo);
+    saldo -= bayar;
+    rencana.push({ loan: loan, bayar: bayar });
+  });
+
+  const totalBayar = rencana.reduce(function(t, r) { return t + r.bayar; }, 0);
+  const rincian = rencana.map(function(r) {
+    return "• " + r.loan.keterangan + ": " + formatRp(r.bayar) +
+      (r.bayar >= r.loan.sisa ? " (lunas)" : " (sebagian)");
+  }).join("\n");
+
+  if (!confirm(
+    "Bayar loan otomatis dari kas?\n\n" + rincian +
+    "\n\nTotal diambil dari kas: " + formatRp(totalBayar) +
+    "\nSaldo kas setelahnya: " + formatRp(saldo)
+  )) return;
+
+  const updates = {};
+  const waktu = Date.now();
+
+  rencana.forEach(function(r, i) {
+    buildLoanPaymentUpdate(updates, r.loan, r.bayar, waktu + i, "otomatis");
+  });
+
+  if (autoPayLoanBtn) autoPayLoanBtn.disabled = true;
+
+  db.ref().update(updates)
+    .then(function() {
+      alert("Pembayaran loan otomatis berhasil.\nTotal: " + formatRp(totalBayar));
+    })
+    .catch(function(error) {
+      alert("Gagal bayar loan otomatis: " + error.message);
+    })
+    .finally(function() {
+      renderLoanList();
+    });
+}
+
+if (autoPayLoanBtn) autoPayLoanBtn.addEventListener("click", autoPayLoansFromKas);
 
 function resetFotoInput() {
   if (fotoInput) fotoInput.value = "";
@@ -963,7 +1362,7 @@ if (selectedTv) {
         .then(function() {
           rentalForm.reset();
           resetFotoInput();
-          alert("Sewa berhasil disimpan!\n\nKas 5%: " + formatRp(kasNominal) + "\nPendapatan bersih: " + formatRp(pendapatanBersih));
+          alert("Sewa berhasil disimpan!\n\nKas " + kasPersen + "%: " + formatRp(kasNominal) + "\nPendapatan bersih: " + formatRp(pendapatanBersih));
         })
         .catch(function(error) {
           alert("Gagal menyimpan sewa: " + error.message);
@@ -1313,14 +1712,58 @@ function renderMonthlyHistory(keys) {
       '<button type="button" class="btn-monthly-detail" data-month-key="' + key + '">' +
         '<i class="fas fa-eye"></i> Detail' +
       '</button>' +
+      '<button type="button" class="btn-monthly-detail btn-monthly-download" data-month-key="' + key + '" title="Download Excel">' +
+        '<i class="fas fa-download"></i>' +
+      '</button>' +
       '</div>';
   }).join("");
 
   history.querySelectorAll(".btn-monthly-detail").forEach(function(button) {
     button.addEventListener("click", function() {
-      openMonthlyDetail(button.dataset.monthKey);
+      if (button.classList.contains("btn-monthly-download")) {
+        downloadMonthlyReport(button.dataset.monthKey);
+      } else {
+        openMonthlyDetail(button.dataset.monthKey);
+      }
     });
   });
+}
+
+/* Pembagian omset bersih Glena & Aldo (sama dengan logika popup detail) */
+function getOwnerSplit(rentals) {
+  let gross = 0;
+  let glena = 0;
+  let aldo = 0;
+  let psDNet = 0;
+
+  rentals.forEach(function(rental) {
+    const unit = rental.psUnit;
+    const rentalGross = getRentalGross(rental);
+    gross += rentalGross;
+
+    if (unit === "A" || unit === "C" || unit === "TV_A") {
+      glena += getPendapatanBersih(rental);
+    } else if (unit === "B" || unit === "TV_B") {
+      aldo += getPendapatanBersih(rental);
+    } else if (unit === "D") {
+      psDNet += getPendapatanBersih(rental);
+    } else if (unit === "E") {
+      const g = rental.glenaNet !== undefined
+        ? Number(rental.glenaNet || 0)
+        : Math.round(rentalGross * 0.30);
+      const a = rental.aldoNet !== undefined
+        ? Number(rental.aldoNet || 0)
+        : rentalGross - Math.round(rentalGross * 0.30) - Math.round(rentalGross * 0.30);
+      glena += g;
+      aldo += a;
+    }
+  });
+
+  const aldoD = Math.floor(psDNet / 2);
+  aldo += aldoD;
+  glena += psDNet - aldoD;
+
+  return { gross: gross, glena: glena, aldo: aldo };
 }
 
 function closeMonthlyDetail() {
@@ -1361,72 +1804,9 @@ function openMonthlyDetail(monthKey) {
 
   const summary = getMonthlySummary(monthKey);
 
-    const gross = rentals.reduce(function(total, rental) {
-    return total + getRentalGross(rental);
-  }, 0);
-
-  const glenaNet = rentals
-    .filter(function(rental) {
-      return (
-        rental.psUnit === "A" ||
-        rental.psUnit === "C" ||
-        rental.psUnit === "TV_A"
-      );
-    })
-    .reduce(function(total, rental) {
-      return total + getPendapatanBersih(rental);
-    }, 0);
-
-  const aldoNet = rentals
-    .filter(function(rental) {
-      return (
-        rental.psUnit === "B" ||
-        rental.psUnit === "TV_B"
-      );
-    })
-    .reduce(function(total, rental) {
-      return total + getPendapatanBersih(rental);
-    }, 0);
-
-    // TAMBAHAN KHUSUS PS D
-  const psDNet = rentals
-    .filter(function(rental) {
-      return rental.psUnit === "D";
-    })
-    .reduce(function(total, rental) {
-      return total + getPendapatanBersih(rental);
-    }, 0);
-
-  const bagianAldoPS_D = Math.floor(psDNet / 2);
-  const bagianGlenaPS_D = psDNet - bagianAldoPS_D;
-
-  const psEGlenaNet = rentals
-  .filter(function(rental) {
-    return rental.psUnit === "E";
-  })
-  .reduce(function(total, rental) {
-    if (rental.glenaNet !== undefined) {
-      return total + Number(rental.glenaNet || 0);
-    }
-
-    return total + Math.round(getRentalGross(rental) * 0.30);
-  }, 0);
-
-const psEAldoNet = rentals
-  .filter(function(rental) {
-    return rental.psUnit === "E";
-  })
-  .reduce(function(total, rental) {
-    if (rental.aldoNet !== undefined) {
-      return total + Number(rental.aldoNet || 0);
-    }
-
-    const gross = getRentalGross(rental);
-    const kas = Math.round(gross * 0.30);
-    const glena = Math.round(gross * 0.30);
-
-    return total + gross - kas - glena;
-  }, 0);
+  const split = getOwnerSplit(rentals);
+  const gross = split.gross;
+  currentDetailMonthKey = monthKey;
 
   if (monthlyDetailTitle) {
     monthlyDetailTitle.textContent = formatMonthKey(monthKey);
@@ -1441,15 +1821,11 @@ const psEAldoNet = rentals
   }
 
 if (detailGlenaNet) {
-  detailGlenaNet.textContent = formatRp(
-    glenaNet + bagianGlenaPS_D + psEGlenaNet
-  );
+  detailGlenaNet.textContent = formatRp(split.glena);
 }
 
 if (detailAldoNet) {
-  detailAldoNet.textContent = formatRp(
-    aldoNet + bagianAldoPS_D + psEAldoNet
-  );
+  detailAldoNet.textContent = formatRp(split.aldo);
 }
 
   if (detailKas) {
@@ -1550,9 +1926,7 @@ function renderMonthlyKasList(kas) {
   monthlyKasDetailList.innerHTML = kas.map(function(item) {
     const masuk = item.jenis === "masuk";
 
-    const labelKas = item.sumber === "loan"
-      ? "Loan Masuk"
-      : (masuk ? "Kas Masuk" : "Kas Keluar");
+    const labelKas = getKasLabel(item);
 
     return '<div class="month-detail-item">' +
       '<div class="month-detail-left">' +
@@ -1591,9 +1965,378 @@ if (monthlySelect) {
   });
 }
 
-if (monthlySelect) {
-  monthlySelect.addEventListener("change", function() {
-    renderSelectedMonth(monthlySelect.value);
+/* =========================
+   DOWNLOAD EXCEL
+========================= */
+function formatDateExport(timestamp) {
+  if (!timestamp) return "";
+  const d = new Date(Number(timestamp));
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = function(n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+    " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function autoWidth(rows) {
+  const widths = [];
+  rows.forEach(function(row) {
+    row.forEach(function(cell, i) {
+      const len = String(cell === undefined || cell === null ? "" : cell).length;
+      widths[i] = Math.min(60, Math.max(widths[i] || 8, len + 2));
+    });
+  });
+  return widths.map(function(w) { return { wch: w }; });
+}
+
+/* ---------- Pembuat file .xlsx mandiri (tanpa library luar) ---------- */
+const CRC_TABLE = (function() {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) {
+    crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+/* files: [{ name, data: Uint8Array }] -> Uint8Array zip (tanpa kompresi) */
+function buildZip(files) {
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  files.forEach(function(file) {
+    const nameBytes = encoder.encode(file.name);
+    const data = file.data;
+    const crc = crc32(data);
+
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true);
+    local.setUint16(4, 20, true);
+    local.setUint16(6, 0x0800, true);
+    local.setUint16(8, 0, true);
+    local.setUint16(10, 0, true);
+    local.setUint16(12, 0x21, true);
+    local.setUint32(14, crc, true);
+    local.setUint32(18, data.length, true);
+    local.setUint32(22, data.length, true);
+    local.setUint16(26, nameBytes.length, true);
+    local.setUint16(28, 0, true);
+
+    const central = new DataView(new ArrayBuffer(46));
+    central.setUint32(0, 0x02014b50, true);
+    central.setUint16(4, 20, true);
+    central.setUint16(6, 20, true);
+    central.setUint16(8, 0x0800, true);
+    central.setUint16(10, 0, true);
+    central.setUint16(12, 0, true);
+    central.setUint16(14, 0x21, true);
+    central.setUint32(16, crc, true);
+    central.setUint32(20, data.length, true);
+    central.setUint32(24, data.length, true);
+    central.setUint16(28, nameBytes.length, true);
+    central.setUint16(30, 0, true);
+    central.setUint16(32, 0, true);
+    central.setUint16(34, 0, true);
+    central.setUint16(36, 0, true);
+    central.setUint32(38, 0, true);
+    central.setUint32(42, offset, true);
+
+    localParts.push(new Uint8Array(local.buffer), nameBytes, data);
+    centralParts.push(new Uint8Array(central.buffer), nameBytes);
+    offset += 30 + nameBytes.length + data.length;
+  });
+
+  const centralSize = centralParts.reduce(function(t, p) { return t + p.length; }, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, files.length, true);
+  end.setUint16(10, files.length, true);
+  end.setUint32(12, centralSize, true);
+  end.setUint32(16, offset, true);
+
+  const parts = localParts.concat(centralParts, [new Uint8Array(end.buffer)]);
+  const total = parts.reduce(function(t, p) { return t + p.length; }, 0);
+  const out = new Uint8Array(total);
+  let pos = 0;
+  parts.forEach(function(p) {
+    out.set(p, pos);
+    pos += p.length;
+  });
+  return out;
+}
+
+function xmlEscape(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+}
+
+function columnName(index) {
+  let name = "";
+  let n = index + 1;
+  while (n > 0) {
+    const m = (n - 1) % 26;
+    name = String.fromCharCode(65 + m) + name;
+    n = Math.floor((n - 1) / 26);
+  }
+  return name;
+}
+
+/* Baris pertama tiap sheet = header (tebal). Angka diformat #,##0 */
+function buildSheetXml(rows, boldRows) {
+  const cols = autoWidth(rows).map(function(c, i) {
+    return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + c.wch + '" customWidth="1"/>';
+  }).join("");
+
+  const body = rows.map(function(row, r) {
+    const bold = boldRows.indexOf(r) !== -1;
+    const cells = row.map(function(cell, c) {
+      if (cell === undefined || cell === null || cell === "") return "";
+      const ref = columnName(c) + (r + 1);
+
+      if (typeof cell === "number" && Number.isFinite(cell)) {
+        return '<c r="' + ref + '" s="' + (bold ? 3 : 2) + '"><v>' + cell + '</v></c>';
+      }
+
+      return '<c r="' + ref + '" t="inlineStr"' + (bold ? ' s="1"' : "") +
+        '><is><t xml:space="preserve">' + xmlEscape(cell) + '</t></is></c>';
+    }).join("");
+
+    return '<row r="' + (r + 1) + '">' + cells + '</row>';
+  }).join("");
+
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    (cols ? '<cols>' + cols + '</cols>' : "") +
+    '<sheetData>' + body + '</sheetData></worksheet>';
+}
+
+function buildXlsx(sheets) {
+  const enc = new TextEncoder();
+  const files = [];
+  const add = function(name, text) { files.push({ name: name, data: enc.encode(text) }); };
+  const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+
+  add("[Content_Types].xml", head +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+    sheets.map(function(_, i) {
+      return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+    }).join("") +
+    '</Types>');
+
+  add("_rels/.rels", head +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+    '</Relationships>');
+
+  add("xl/workbook.xml", head +
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+    sheets.map(function(sheet, i) {
+      return '<sheet name="' + xmlEscape(sheet.name.replace(/[\\\/?*\[\]:]/g, " ").slice(0, 31)) +
+        '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>';
+    }).join("") +
+    '</sheets></workbook>');
+
+  add("xl/_rels/workbook.xml.rels", head +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    sheets.map(function(_, i) {
+      return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>';
+    }).join("") +
+    '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '</Relationships>');
+
+  add("xl/styles.xml", head +
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
+    '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
+    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="4">' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+      '<xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+      '<xf numFmtId="3" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>' +
+    '</cellXfs>' +
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+    '</styleSheet>');
+
+  sheets.forEach(function(sheet, i) {
+    add("xl/worksheets/sheet" + (i + 1) + ".xml", buildSheetXml(sheet.rows, sheet.boldRows || [0]));
+  });
+
+  return buildZip(files);
+}
+
+/* sheets: [{ name, rows: [[...], ...], boldRows?: [indexBaris] }] */
+function downloadWorkbook(fileBaseName, sheets) {
+  try {
+    const bytes = buildXlsx(sheets);
+    const blob = new Blob([bytes], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileBaseName + ".xlsx";
+    document.body.appendChild(link);
+    link.click();
+
+    setTimeout(function() {
+      URL.revokeObjectURL(link.href);
+      link.remove();
+    }, 1500);
+  } catch (error) {
+    console.error("Gagal membuat file Excel:", error);
+    alert("Gagal membuat file download: " + error.message);
+  }
+}
+
+function downloadMonthlyReport(monthKey) {
+  if (!monthKey) return;
+
+  const inMonth = function(item) {
+    return getMonthKey(item.createdAt) === monthKey;
+  };
+
+  const rentals = allRentals.filter(inMonth).sort(sortByCreatedAsc);
+  const expenses = allExpenses.filter(inMonth).sort(sortByCreatedAsc);
+  const ledger = getKasLedger();
+  const kasBulanIni = ledger.filter(inMonth);
+  const summary = getMonthlySummary(monthKey);
+  const split = getOwnerSplit(rentals);
+
+  const saldoAwal = (function() {
+    const sebelum = ledger.filter(function(k) { return getMonthKey(k.createdAt) < monthKey; });
+    return sebelum.length ? sebelum[sebelum.length - 1].saldoSetelah : 0;
+  })();
+  const saldoAkhir = kasBulanIni.length
+    ? kasBulanIni[kasBulanIni.length - 1].saldoSetelah
+    : saldoAwal;
+
+  const ringkasan = [
+    ["Rekap Bulanan", formatMonthKey(monthKey)],
+    [],
+    ["Keterangan", "Nominal (Rp)"],
+    ["Jumlah Transaksi Sewa", summary.transactionCount],
+    ["Omset Kotor", split.gross],
+    ["Pendapatan Bersih", summary.income],
+    ["Omset Bersih Glena Adan", split.glena],
+    ["Omset Bersih Aldo Laras", split.aldo],
+    ["Kas dari Sewa", summary.kas],
+    ["Pengeluaran", summary.expenses],
+    ["Sisa Pendapatan", summary.final],
+    [],
+    ["Saldo Kas Awal Bulan", saldoAwal],
+    ["Saldo Kas Akhir Bulan", saldoAkhir],
+    [],
+    ["Didownload", formatDateExport(Date.now())]
+  ];
+
+  const sewa = [["No", "Tanggal", "Nomor Penyewa", "Unit", "Durasi", "Satuan", "Omset Kotor", "Kas", "Pendapatan Bersih", "Input oleh"]]
+    .concat(rentals.map(function(r, i) {
+      return [
+        i + 1,
+        formatDateExport(r.createdAt),
+        r.nomorPenyewa || "",
+        String(r.psUnit || "").replace("_", " "),
+        Number(r.durasi || 0),
+        r.durasiUnit || "jam",
+        getRentalGross(r),
+        getRentalKas(r),
+        getPendapatanBersih(r),
+        r.createdBy || ""
+      ];
+    }));
+
+  const pengeluaran = [["No", "Tanggal", "Keterangan", "Nominal", "Input oleh"]]
+    .concat(expenses.map(function(e, i) {
+      return [i + 1, formatDateExport(e.createdAt), e.keterangan || "", Number(e.nominal || 0), e.createdBy || ""];
+    }));
+
+  const kas = [["No", "Tanggal", "Jenis", "Keterangan", "Masuk", "Keluar", "Saldo Setelah"]]
+    .concat(kasBulanIni.map(function(k, i) {
+      const masuk = k.jenis === "masuk";
+      return [
+        i + 1,
+        formatDateExport(k.createdAt),
+        getKasLabel(k),
+        k.keterangan || "",
+        masuk ? Number(k.nominal || 0) : "",
+        masuk ? "" : Number(k.nominal || 0),
+        k.saldoSetelah
+      ];
+    }));
+
+  downloadWorkbook("Rekap-Bulanan-" + monthKey, [
+    { name: "Ringkasan", rows: ringkasan, boldRows: [0, 2] },
+    { name: "Sewa", rows: sewa },
+    { name: "Pengeluaran", rows: pengeluaran },
+    { name: "Kas", rows: kas }
+  ]);
+}
+
+function downloadAllKasHistory() {
+  const ledger = getKasLedger();
+
+  if (!ledger.length) {
+    alert("Belum ada transaksi kas.");
+    return;
+  }
+
+  const rows = [["No", "Tanggal", "Bulan", "Jenis", "Keterangan", "Masuk", "Keluar", "Saldo Setelah"]]
+    .concat(ledger.map(function(k) {
+      const masuk = k.jenis === "masuk";
+      return [
+        k.urutan,
+        formatDateExport(k.createdAt),
+        formatMonthKey(getMonthKey(k.createdAt)),
+        getKasLabel(k),
+        k.keterangan || "",
+        masuk ? Number(k.nominal || 0) : "",
+        masuk ? "" : Number(k.nominal || 0),
+        k.saldoSetelah
+      ];
+    }));
+
+  const loanRows = [["Tanggal", "Keterangan", "Total Loan", "Sudah Dibayar", "Sisa", "Status"]]
+    .concat(getLoanStatuses().map(function(l) {
+      return [formatDateExport(l.loan.createdAt), l.keterangan, l.total, l.dibayar, l.sisa, l.lunas ? "Lunas" : "Belum lunas"];
+    }));
+
+  downloadWorkbook("History-Kas-" + getMonthKey(Date.now()), [
+    { name: "History Kas", rows: rows },
+    { name: "Loan", rows: loanRows }
+  ]);
+}
+
+if (downloadKasHistory) downloadKasHistory.addEventListener("click", downloadAllKasHistory);
+
+if (downloadSelectedMonth) {
+  downloadSelectedMonth.addEventListener("click", function() {
+    downloadMonthlyReport(monthlySelect ? monthlySelect.value : getMonthKey(Date.now()));
+  });
+}
+
+if (downloadMonthlyDetail) {
+  downloadMonthlyDetail.addEventListener("click", function() {
+    downloadMonthlyReport(currentDetailMonthKey);
   });
 }
 
@@ -1726,12 +2469,9 @@ updates["rentals/" + id + "/updatedBy"] = currentUser.role;
 
       if (relatedKas) {
         updates["kasTransactions/" + relatedKas.id + "/nominal"] = kasNominal;
-        if (psUnit === "E") {
-  updates["kasTransactions/" + relatedKas.id + "/persentase"] = 30;
-  updates["kasTransactions/" + relatedKas.id + "/keterangan"] =
-    "Kas dari sewa PS E";
-}
-        updates["kasTransactions/" + relatedKas.id + "/keterangan"] = "Kas 5% dari sewa PS " + psUnit;
+        updates["kasTransactions/" + relatedKas.id + "/persentase"] = kasPersen;
+        updates["kasTransactions/" + relatedKas.id + "/keterangan"] =
+          "Kas " + kasPersen + "% dari sewa PS " + psUnit;
         updates["kasTransactions/" + relatedKas.id + "/updatedAt"] = Date.now();
         updates["kasTransactions/" + relatedKas.id + "/updatedBy"] = currentUser.role;
       }
@@ -1835,6 +2575,9 @@ if (editExpenseForm) {
 
       await db.ref().update(updates);
       closeEditExpenseModalForm();
+closePayLoanModalForm();
+closeEditKasModalForm();
+closeMonthlyDetail();
       alert("Pengeluaran dan kas keluar terkait berhasil diperbarui.");
     } catch (error) {
       alert("Gagal edit pengeluaran: " + error.message);
@@ -1935,10 +2678,27 @@ if (editKasForm) {
 async function deleteKasTransaction(id) {
   if (!isMaster() || !db) return;
 
-  if (!confirm("Hapus transaksi kas ini?\n\nMenghapus kas tidak menghapus transaksi sewa atau pengeluaran asal.")) return;
+  const kas = allKasTransactions.find(function(item) { return item.id === id; });
+  const payments = kas && kas.sumber === "loan"
+    ? allKasTransactions.filter(function(item) {
+        return item.sumber === "bayar_loan" && item.loanId === id;
+      })
+    : [];
+
+  const pesan = payments.length
+    ? "Hapus loan ini beserta " + payments.length + " catatan pembayarannya?\n\nSaldo kas akan dihitung ulang."
+    : "Hapus transaksi kas ini?\n\nMenghapus kas tidak menghapus transaksi sewa atau pengeluaran asal.";
+
+  if (!confirm(pesan)) return;
 
   try {
-    await db.ref("kasTransactions/" + id).remove();
+    const updates = {};
+    updates["kasTransactions/" + id] = null;
+    payments.forEach(function(p) {
+      updates["kasTransactions/" + p.id] = null;
+    });
+
+    await db.ref().update(updates);
     alert("Transaksi kas berhasil dihapus.");
   } catch (error) {
     alert("Gagal hapus kas: " + error.message);
