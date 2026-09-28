@@ -2,13 +2,33 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Panel Eboni Space</title>
 
- <link rel="stylesheet" href="style.css?v=11">
+  <!-- Aplikasi (PWA) — bisa dipasang di iPhone lewat Safari > Bagikan > Tambah ke Layar Utama -->
+  <meta name="theme-color" content="#03030c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Eboni Panel">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/favicon-64.png">
+
+  <link rel="stylesheet" href="style.css?v=12">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
+
+  <!-- BACKGROUND GALAKSI -->
+  <div class="galaxy-bg" aria-hidden="true">
+    <div class="nebula nebula-1"></div>
+    <div class="nebula nebula-2"></div>
+    <div class="nebula nebula-3"></div>
+    <div class="nebula nebula-4"></div>
+  </div>
+  <canvas id="galaxyCanvas" aria-hidden="true"></canvas>
+  <div class="galaxy-vignette" aria-hidden="true"></div>
 
   <!-- LOGIN -->
   <div id="loginScreen" class="screen">
@@ -1019,6 +1039,17 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<script src="app.js?v=65"></script>
+<script src="app.js?v=66"></script>
+<script src="fx.js?v=1"></script>
+
+<script>
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    window.addEventListener("load", function() {
+      navigator.serviceWorker.register("sw.js").catch(function(error) {
+        console.warn("Service worker gagal:", error);
+      });
+    });
+  }
+</script>
 </body>
 </html>
