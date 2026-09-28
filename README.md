@@ -139,3 +139,26 @@ ps-rental-dashboard/
 ---
 
 Dibuat untuk keperluan panel omset sewa PS.
+
+---
+
+## Pasang sebagai Aplikasi di iPhone / Android
+
+Panel ini sudah berupa **PWA** (Progressive Web App):
+
+**iPhone / iPad (Safari):**
+1. Buka link panel di **Safari**
+2. Ketuk tombol **Bagikan** (kotak dengan panah ke atas)
+3. Pilih **Tambah ke Layar Utama** → **Tambah**
+4. Ikon "Eboni Panel" muncul di layar utama dan terbuka layar penuh seperti aplikasi
+
+**Android (Chrome):** menu ⋮ → **Instal aplikasi** / **Tambahkan ke layar utama**.
+
+File terkait: `manifest.webmanifest`, `sw.js`, folder `icons/`.
+
+## Tampilan
+
+- `style.css` — tema galaxy elegan (kaca gelap + aksen emas)
+- `fx.js` — background galaksi beranimasi (bintang berkelip, galaksi spiral berputar,
+  bintang jatuh), angka berjalan, efek muncul saat scroll, ripple tombol.
+  Otomatis mati kalau HP mengaktifkan "Kurangi Gerakan" (Reduce Motion).
