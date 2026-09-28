@@ -1191,3 +1191,160 @@ button:active {
     align-items: flex-start;
   }
 }
+
+/* =====================================================
+   KAS DARI AWAL, LOAN & DOWNLOAD (v11)
+===================================================== */
+.kas-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.kas-loan-card { background: linear-gradient(135deg, #065f46, #10b981 55%, #5eead4); }
+.kas-loan-sisa-card { background: linear-gradient(135deg, #9a3412, #f97316 55%, #facc15); }
+
+.total-sub {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(228, 191, 255, 0.15);
+}
+
+.card-title-row h3 {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.card-title-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card-subtext {
+  margin: 10px 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 11px;
+  border: 1px solid rgba(199, 210, 254, 0.25);
+  border-radius: 9px;
+  cursor: pointer;
+  background: rgba(99, 102, 241, 0.22);
+  color: #e0e7ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.btn-mini:hover {
+  background: rgba(99, 102, 241, 0.38);
+}
+
+.btn-mini:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.kas-history-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.kas-amount-col {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.kas-saldo-after {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.kas-row-number {
+  flex: 0 0 auto;
+  min-width: 26px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.loan-progress {
+  height: 6px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.loan-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #10b981, #5eead4);
+}
+
+.loan-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.loan-badge.lunas { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; }
+.loan-badge.belum { background: rgba(249, 115, 22, 0.25); color: #fdba74; }
+
+.btn-pay-loan {
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+
+.readonly-box {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .heading-actions {
+    width: 100%;
+  }
+
+  .heading-actions > * {
+    flex: 1 1 auto;
+  }
+
+  .kas-row-number {
+    display: none;
+  }
+}

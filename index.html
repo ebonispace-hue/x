@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Eboni Space</title>
 
- <link rel="stylesheet" href="style.css?v=10">
+ <link rel="stylesheet" href="style.css?v=11">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -140,18 +140,41 @@
 </p>
     </div>
 
-    <button type="button" id="openLoanModal" class="btn-primary">
-      <i class="fas fa-hand-holding-dollar"></i>
-      Tambah Loan
-    </button>
+    <div class="heading-actions">
+      <button type="button" id="openLoanModal" class="btn-primary">
+        <i class="fas fa-hand-holding-dollar"></i>
+        Tambah Loan
+      </button>
+
+      <button type="button" id="openPayLoanModal" class="btn-secondary">
+        <i class="fas fa-money-check-dollar"></i>
+        Bayar Loan
+      </button>
+    </div>
   </div>
         <div class="history-card" style="margin-top:16px;">
-  <h3>
-    <i class="fas fa-receipt"></i>
-    Riwayat Kas Terakhir
-  </h3>
+  <div class="card-title-row">
+    <h3>
+      <i class="fas fa-receipt"></i>
+      Riwayat Kas dari Awal
+    </h3>
 
-  <div id="kasHistory" class="history-list">
+    <div class="card-title-actions">
+      <button type="button" id="toggleKasOrder" class="btn-mini" title="Ubah urutan">
+        <i class="fas fa-arrow-down-short-wide"></i>
+        <span id="kasOrderLabel">Terlama dulu</span>
+      </button>
+
+      <button type="button" id="downloadKasHistory" class="btn-mini" title="Download Excel">
+        <i class="fas fa-file-excel"></i>
+        Download
+      </button>
+    </div>
+  </div>
+
+  <p class="card-subtext" id="kasHistoryInfo">Semua transaksi kas sejak awal, lengkap dengan saldo setelah transaksi.</p>
+
+  <div id="kasHistory" class="history-list kas-history-scroll">
     <p class="empty">Belum ada transaksi kas</p>
   </div>
 </div>
@@ -167,6 +190,17 @@
     <span class="total-value" id="kasLoan">Rp 0</span>
   </div>
 </div>
+          <div class="total-card kas-loan-sisa-card">
+            <div class="total-icon">
+              <i class="fas fa-scale-unbalanced"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Sisa Loan Belum Dibayar</span>
+              <span class="total-value" id="kasLoanSisa">Rp 0</span>
+              <span class="total-sub" id="kasLoanDibayar">Sudah dibayar Rp 0</span>
+            </div>
+          </div>
           <div class="total-card kas-saldo-card">
             <div class="total-icon">
               <i class="fas fa-wallet"></i>
@@ -198,6 +232,31 @@
               <span class="total-label">Total Kas Keluar</span>
               <span class="total-value" id="kasKeluar">Rp 0</span>
             </div>
+          </div>
+        </div>
+
+        <div class="history-card" style="margin-top:16px;">
+          <div class="card-title-row">
+            <h3>
+              <i class="fas fa-file-invoice-dollar"></i>
+              Daftar Loan
+            </h3>
+
+            <div class="card-title-actions">
+              <button type="button" id="autoPayLoanBtn" class="btn-mini" title="Bayar loan otomatis dari saldo kas">
+                <i class="fas fa-bolt"></i>
+                Bayar Otomatis dari Kas
+              </button>
+            </div>
+          </div>
+
+          <p class="card-subtext">
+            Pembayaran loan otomatis diambil dari saldo kas (tercatat sebagai kas keluar).
+            "Bayar Otomatis" melunasi loan terlama dulu sebesar saldo kas yang tersedia.
+          </p>
+
+          <div id="loanList" class="history-list">
+            <p class="empty">Belum ada loan</p>
           </div>
         </div>
       </section>
@@ -233,6 +292,8 @@
 <option value="C">PS C</option>
 <option value="D">PS D</option>
 <option value="E">PS E</option>
+<option value="F">PS F</option>
+<option value="G">PS G</option>
   </select>
 </div>
 
@@ -418,13 +479,20 @@
             </h2>
 
             <p>
-              Rekap bulan lama tetap tersimpan.
+              Rekap bulan lama tetap tersimpan dan bisa di-download (Excel).
             </p>
           </div>
 
-          <select id="monthlySelect">
-            <option value="">Memuat data...</option>
-          </select>
+          <div class="heading-actions">
+            <select id="monthlySelect">
+              <option value="">Memuat data...</option>
+            </select>
+
+            <button type="button" id="downloadSelectedMonth" class="btn-secondary">
+              <i class="fas fa-file-excel"></i>
+              Download
+            </button>
+          </div>
         </div>
 
         <div class="monthly-grid">
@@ -648,6 +716,8 @@
   <option value="C">PS C</option>
   <option value="D">PS D — Aldo Laras &amp; Adan Glena</option>
   <option value="E">PS E</option>
+<option value="F">PS F</option>
+<option value="G">PS G</option>
   <option value="TV_A">TV A</option>
   <option value="TV_B">TV B</option>
 </select>
@@ -675,7 +745,7 @@
 
         <div class="form-note">
           <i class="fas fa-circle-info"></i>
-          Edit nominal tidak mengubah catatan kas lama.
+          Kas otomatis dari transaksi ini ikut diperbarui.
         </div>
 
         <div class="modal-actions">
@@ -684,6 +754,165 @@
           </button>
 
           <button type="submit" class="btn-primary" id="saveEditBtn">
+            <i class="fas fa-save"></i>
+            Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- MODAL BAYAR LOAN -->
+  <div id="payLoanModal" class="modal hidden">
+    <div class="modal-overlay" id="payLoanModalOverlay"></div>
+
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>
+          <i class="fas fa-money-check-dollar"></i>
+          Bayar Loan dari Kas
+        </h3>
+
+        <button type="button" id="closePayLoanModal" class="btn-icon">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="payLoanForm">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="payLoanSelect">Pilih Loan</label>
+            <select id="payLoanSelect" required></select>
+          </div>
+
+          <div class="form-group">
+            <label for="payLoanNominal">Nominal Pembayaran (Rp)</label>
+
+            <input
+              type="number"
+              id="payLoanNominal"
+              min="1"
+              placeholder="Contoh: 50000"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label>Saldo Kas Saat Ini</label>
+            <div class="readonly-box" id="payLoanSaldo">Rp 0</div>
+          </div>
+        </div>
+
+        <div class="form-note" id="payLoanInfo">
+          <i class="fas fa-circle-info"></i>
+          Nominal otomatis diambil dari saldo kas.
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelPayLoan" class="btn-secondary">
+            Batal
+          </button>
+
+          <button type="submit" id="savePayLoanBtn" class="btn-primary">
+            <i class="fas fa-check"></i>
+            Bayar dari Kas
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL EDIT PENGELUARAN -->
+  <div id="editExpenseModal" class="modal hidden">
+    <div class="modal-overlay" id="editExpenseModalOverlay"></div>
+
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>
+          <i class="fas fa-edit"></i>
+          Edit Pengeluaran
+        </h3>
+
+        <button type="button" id="closeEditExpenseModal" class="btn-icon">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="editExpenseForm">
+        <input type="hidden" id="editExpenseId">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="editExpenseNominal">Nominal Pengeluaran (Rp)</label>
+            <input type="number" id="editExpenseNominal" min="1" required>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="editExpenseKeterangan">Keterangan</label>
+            <textarea id="editExpenseKeterangan" rows="3" maxlength="300" required></textarea>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelEditExpense" class="btn-secondary">
+            Batal
+          </button>
+
+          <button type="submit" id="saveEditExpenseBtn" class="btn-primary">
+            <i class="fas fa-save"></i>
+            Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL EDIT KAS -->
+  <div id="editKasModal" class="modal hidden">
+    <div class="modal-overlay" id="editKasModalOverlay"></div>
+
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>
+          <i class="fas fa-edit"></i>
+          Edit Transaksi Kas
+        </h3>
+
+        <button type="button" id="closeEditKasModal" class="btn-icon">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="editKasForm">
+        <input type="hidden" id="editKasId">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="editKasJenis">Jenis</label>
+            <select id="editKasJenis" required>
+              <option value="masuk">Kas Masuk</option>
+              <option value="keluar">Kas Keluar</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="editKasNominal">Nominal (Rp)</label>
+            <input type="number" id="editKasNominal" min="1" required>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="editKasKeterangan">Keterangan</label>
+            <textarea id="editKasKeterangan" rows="3" maxlength="300" required></textarea>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelEditKas" class="btn-secondary">
+            Batal
+          </button>
+
+          <button type="submit" id="saveEditKasBtn" class="btn-primary">
             <i class="fas fa-save"></i>
             Simpan Perubahan
           </button>
@@ -703,9 +932,16 @@
         Detail: <span id="monthlyDetailTitle">-</span>
       </h3>
 
-      <button type="button" id="closeMonthlyDetailModal" class="btn-icon">
-        <i class="fas fa-times"></i>
-      </button>
+      <div class="heading-actions">
+        <button type="button" id="downloadMonthlyDetail" class="btn-mini" title="Download Excel">
+          <i class="fas fa-file-excel"></i>
+          Download
+        </button>
+
+        <button type="button" id="closeMonthlyDetailModal" class="btn-icon">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
     </div>
 
    <div class="monthly-detail-summary">
@@ -783,6 +1019,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<script src="app.js?v=63"></script>
+<script src="app.js?v=65"></script>
 </body>
 </html>
