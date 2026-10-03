@@ -2,7 +2,6 @@
    PANEL EBONI SPACE — Galaxy Elegant Theme (v12)
    Class & ID sama dengan versi lama, jadi app.js tidak berubah.
 ===================================================== */
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap");
 
 :root {
   --bg: #03030c;
@@ -2336,3 +2335,32 @@ input[type="number"]::-webkit-outer-spin-button {
   .page .form-section .modal-actions { flex-direction: column-reverse; }
   .page .form-section .modal-actions button { width: 100%; }
 }
+
+/* ---------- Foto: kecil di daftar, penuh saat diketuk ---------- */
+img.foto-thumb { cursor: zoom-in; }
+
+.foto-viewer {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(2, 2, 10, 0.9);
+}
+
+.foto-viewer.hidden { display: none; }
+
+.foto-viewer-box { text-align: center; }
+
+.foto-viewer-box img {
+  max-width: min(92vw, 900px);
+  max-height: 80vh;
+  border-radius: 14px;
+  object-fit: contain;
+}
+
+.foto-viewer-msg { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+
+.foto-viewer-close { position: absolute; top: calc(16px + var(--safe-top)); right: 16px; }

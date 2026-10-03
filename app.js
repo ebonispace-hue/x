@@ -25,15 +25,37 @@ const TV_OWNERS = {
 };
 /* Foto: tidak ada batas ukuran upload.
    Foto otomatis dikecilkan sebelum disimpan supaya database tetap ringan. */
-const FOTO_MAX_SIDE = 1280;      // sisi terpanjang (pixel)
-const FOTO_QUALITY = 0.8;        // kualitas JPEG
-const FOTO_MAX_SIMPAN = 900 * 1024; // target ukuran setelah dikompres
+const FOTO_MAX_SIDE = 1080;      // sisi terpanjang (pixel)
+const FOTO_QUALITY = 0.78;       // kualitas JPEG
+const FOTO_MAX_SIMPAN = 350 * 1024; // target ukuran setelah dikompres
+const THUMB_SIDE = 160;          // foto kecil untuk daftar history
+
+/* Foto disimpan terpisah dari data sewa supaya panel cepat dibuka:
+   - rentalThumbs/{id}  = foto kecil (±8 KB) untuk daftar
+   - rentalPhotos/{id}  = foto penuh, baru diambil saat foto diketuk */
+let rentalThumbs = {};
+const fullPhotoCache = {};
 
 let db = null;
 let firebaseReady = false;
 let firebaseErrorMsg = "";
 let currentUser = null;
 let allRentals = [];
+
+function getFotoId(rental) {
+  return rental.fotoId || rental.id;
+}
+
+function getFotoThumb(rental) {
+  return rentalThumbs[getFotoId(rental)] || rental.fotoUrl || "";
+}
+
+function fotoImgHtml(rental) {
+  const src = getFotoThumb(rental);
+  if (!src) return '<div class="no-photo"><i class="fas fa-user"></i></div>';
+  return '<img src="' + src + '" alt="Foto penyewa" loading="lazy" class="foto-thumb" data-foto-id="' +
+    escapeHtml(getFotoId(rental)) + '" title="Ketuk untuk lihat foto">';
+}
 let allExpenses = [];
 let allKasTransactions = [];
 let databaseListenersStarted = false;
@@ -341,6 +363,11 @@ function startDatabaseListeners() {
     refreshMonthlyRecap();
   }, databaseError);
 
+  db.ref("rentalThumbs").on("value", function(snapshot) {
+    rentalThumbs = snapshot.val() || {};
+    updateDashboard();
+  }, databaseError);
+
   db.ref("expenses").orderByChild("createdAt").on("value", function(snapshot) {
     const expenses = [];
 
@@ -475,9 +502,7 @@ function renderLatestHistory() {
       : "";
 
     return '<div class="history-item">' +
-      (rental.fotoUrl
-        ? '<img src="' + rental.fotoUrl + '" alt="Foto penyewa">'
-        : '<div class="no-photo"><i class="fas fa-user"></i></div>') +
+      fotoImgHtml(rental) +
       '<div class="item-info">' +
         '<div class="nomor">' + escapeHtml(rental.nomorPenyewa) + '</div>' +
         '<div class="meta">PS ' + escapeHtml(rental.psUnit) + ' · ' +
@@ -521,14 +546,14 @@ function renderTopPenyewa(rentals) {
         nomor: key,
         count: 0,
         total: 0,
-        lastFoto: rental.fotoUrl || ""
+        lastFoto: ""
       };
     }
 
     countMap[key].count += 1;
     countMap[key].total += getPendapatanBersih(rental);
 
-    if (rental.fotoUrl) countMap[key].lastFoto = rental.fotoUrl;
+    if (getFotoThumb(rental)) countMap[key].lastRental = rental;
   });
 
   const sorted = Object.values(countMap).sort(function(a, b) {
@@ -546,8 +571,8 @@ function renderTopPenyewa(rentals) {
 
     return '<div class="history-item">' +
       '<div class="rank-badge ' + rankClass + '">' + (index + 1) + '</div>' +
-      (item.lastFoto
-        ? '<img src="' + item.lastFoto + '" alt="Foto penyewa">'
+      (item.lastRental
+        ? fotoImgHtml(item.lastRental)
         : '<div class="no-photo"><i class="fas fa-user"></i></div>') +
       '<div class="item-info">' +
         '<div class="nomor">' + escapeHtml(item.nomor) + '</div>' +
@@ -1154,6 +1179,73 @@ function compressFoto(file) {
   });
 }
 
+/* Foto kecil untuk daftar history */
+function makeThumb(dataUrl) {
+  return new Promise(function(resolve) {
+    const img = new Image();
+    img.onload = function() {
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      const scale = Math.min(1, THUMB_SIDE / Math.min(w, h));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(w * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = function() { resolve(""); };
+    img.src = dataUrl;
+  });
+}
+
+/* Lihat foto penuh saat foto kecil diketuk */
+function openFotoViewer(fotoId) {
+  let viewer = $("fotoViewer");
+  if (!viewer) {
+    viewer = document.createElement("div");
+    viewer.id = "fotoViewer";
+    viewer.className = "foto-viewer hidden";
+    viewer.innerHTML = '<div class="foto-viewer-box"><img alt="Foto penyewa"><p class="foto-viewer-msg"></p></div>' +
+      '<button type="button" class="btn-icon foto-viewer-close" title="Tutup"><i class="fas fa-times"></i></button>';
+    viewer.addEventListener("click", function() { viewer.classList.add("hidden"); });
+    document.body.appendChild(viewer);
+  }
+
+  const img = viewer.querySelector("img");
+  const msg = viewer.querySelector(".foto-viewer-msg");
+  img.src = rentalThumbs[fotoId] || "";
+  msg.textContent = "Memuat foto...";
+  viewer.classList.remove("hidden");
+
+  function show(src) {
+    if (src) {
+      img.src = src;
+      msg.textContent = "";
+    } else {
+      msg.textContent = "Foto penuh tidak ditemukan.";
+    }
+  }
+
+  if (fullPhotoCache[fotoId]) return show(fullPhotoCache[fotoId]);
+
+  const rental = allRentals.find(function(r) { return getFotoId(r) === fotoId && r.fotoUrl; });
+  if (rental) return show(rental.fotoUrl);
+
+  if (!db) return show("");
+  db.ref("rentalPhotos/" + fotoId).once("value").then(function(snap) {
+    fullPhotoCache[fotoId] = snap.val() || "";
+    show(fullPhotoCache[fotoId]);
+  }).catch(function() { show(""); });
+}
+
+document.addEventListener("click", function(event) {
+  const thumb = event.target.closest && event.target.closest("img.foto-thumb[data-foto-id]");
+  if (thumb) openFotoViewer(thumb.getAttribute("data-foto-id"));
+});
+
 let fotoCompressed = "";
 let fotoCompressing = null;
 
@@ -1256,7 +1348,7 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
       }
     }
 
-    function saveData(fotoUrl) {
+    function saveData(fotoUrl, fotoThumb) {
   const rentalRef = db.ref("rentals").push();
   const kasRef = db.ref("kasTransactions").push();
   const waktu = Date.now();
@@ -1323,7 +1415,8 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
 
 
         
-        fotoUrl: fotoUrl || "",
+        fotoUrl: "",
+        hasFoto: !!fotoUrl,
         createdAt: waktu,
         createdBy: currentUser ? currentUser.role : "Admin",
         monthKey: monthKey
@@ -1367,7 +1460,9 @@ if (selectedTv) {
     kasPersen: 5,
     kasNominal: tvKasNominal,
     nominal: tvPendapatanBersih,
-    fotoUrl: fotoUrl || "",
+    fotoUrl: "",
+    hasFoto: !!fotoUrl,
+    fotoId: fotoUrl ? rentalRef.key : "",
     createdAt: waktu,
     createdBy: currentUser ? currentUser.role : "Admin",
     monthKey: monthKey,
@@ -1392,6 +1487,11 @@ if (selectedTv) {
   };
 }
       
+      if (fotoUrl) {
+        updates["rentalPhotos/" + rentalRef.key] = fotoUrl;
+        updates["rentalThumbs/" + rentalRef.key] = fotoThumb || "";
+      }
+
       db.ref().update(updates)
         .then(function() {
           rentalForm.reset();
@@ -1423,7 +1523,9 @@ if (selectedTv) {
 
       siap
         .then(function(dataUrl) {
-          saveData(dataUrl);
+          return makeThumb(dataUrl).then(function(thumb) {
+            saveData(dataUrl, thumb);
+          });
         })
         .catch(function(error) {
           alert("Foto gagal diproses: " + error.message);
@@ -2568,6 +2670,19 @@ async function deleteRental(id) {
   try {
     const updates = {};
     updates["rentals/" + id] = null;
+
+    // hapus foto kalau tidak dipakai transaksi lain (mis. sewa TV dari input yang sama)
+    const target = allRentals.find(function(r) { return r.id === id; });
+    if (target) {
+      const fotoId = getFotoId(target);
+      const masihDipakai = allRentals.some(function(r) {
+        return r.id !== id && getFotoId(r) === fotoId;
+      });
+      if (!masihDipakai) {
+        updates["rentalPhotos/" + fotoId] = null;
+        updates["rentalThumbs/" + fotoId] = null;
+      }
+    }
 
     allKasTransactions.forEach(function(kas) {
       if (kas.rentalId === id) {
