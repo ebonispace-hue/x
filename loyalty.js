@@ -17,6 +17,7 @@
   const MIN_JAM = 12;
   const PROMO_NOMINAL = 200000;
   const PROMO_JAM = 48;
+  const MULAI_PROGRAM = Date.parse("2026-10-01T00:00:00+07:00"); // sewa sebelum ini tidak dihitung
 
   let claims = [];
   let claimsStarted = false;
@@ -69,7 +70,9 @@
 
   /* ---------- hitung status satu pelanggan ---------- */
   function rentalsList() {
-    try { return Array.isArray(allRentals) ? allRentals : []; } catch (e) { return []; }
+    let list = [];
+    try { list = Array.isArray(allRentals) ? allRentals : []; } catch (e) { list = []; }
+    return list.filter(function(r) { return Number(r.createdAt || 0) >= MULAI_PROGRAM; });
   }
 
   function statusFor(phone, extraRental) {
