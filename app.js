@@ -19,8 +19,10 @@ const USERS = {
 };
 
 const KAS_PERCENT = 0.05;
-const TV_PRICE = 30000;
-const TV_PRICE_12_JAM = 15000;
+const TV_OWNERS = {
+  TV_A: "Adan Glena",
+  TV_B: "Aldo Laras"
+};
 const MAX_FOTO_SIZE = 1.5 * 1024 * 1024;
 
 let db = null;
@@ -1135,11 +1137,19 @@ if (rentalForm) {
 
 const tvUnitEl = $("tvUnit");
 const tvUnit = tvUnitEl ? tvUnitEl.value : "";
+const tvDurasi = $("tvDurasi") ? Number($("tvDurasi").value) : 0;
+const tvDurasiUnit = $("tvDurasiUnit") ? $("tvDurasiUnit").value : "hari";
+const tvNominal = $("tvNominal") ? Number($("tvNominal").value) : 0;
 
 const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
 
     if (!nomor || !psUnit || !durasi || !nominalKotor) {
       alert("Lengkapi semua form sewa.");
+      return;
+    }
+
+    if (tvUnit && (!tvDurasi || tvDurasi <= 0 || !tvNominal || tvNominal <= 0)) {
+      alert("Isi durasi dan nominal sewa TV, atau pilih \"Tidak Sewa TV\".");
       return;
     }
 
@@ -1240,89 +1250,15 @@ keterangan: "Kas dari sewa PS " + psUnit,
         monthKey: monthKey
       };
       
-      const tvPackages = {
-  TV_A_12JAM: {
-    unit: "TV_A",
-    durasi: 12,
-    durasiUnit: "jam",
-    nominal: TV_PRICE_12_JAM,
-    owner: "Adan Glena"
-  },
-
-  TV_A_1: {
-    unit: "TV_A",
-    durasi: 1,
-    durasiUnit: "hari",
-    nominal: TV_PRICE * 1,
-    owner: "Adan Glena"
-  },
-
-  TV_A_2: {
-    unit: "TV_A",
-    durasi: 2,
-    durasiUnit: "hari",
-    nominal: TV_PRICE * 2,
-    owner: "Adan Glena"
-  },
-
-  TV_A_3: {
-    unit: "TV_A",
-    durasi: 3,
-    durasiUnit: "hari",
-    nominal: TV_PRICE * 3,
-    owner: "Adan Glena"
-  },
-
-  TV_A_4: {
-    unit: "TV_A",
-    durasi: 4,
-    durasiUnit: "hari",
-    nominal: TV_PRICE * 4,
-    owner: "Adan Glena"
-  },
-
-  TV_B_12JAM: {
-    unit: "TV_B",
-    durasi: 12,
-    durasiUnit: "jam",
-    nominal: TV_PRICE_12_JAM,
-    owner: "Aldo Laras"
-  },
-
-  TV_B_1: {
-    unit: "TV_B",
-    durasi: 1,
-    durasiUnit: "hari",
-    nominal: TV_PRICE * 1,
-    owner: "Aldo Laras"
-  },
-
-  TV_B_2: {
-    unit: "TV_B",
-    durasi: 2,
-    durasiUnit: "hari",
-    nominal: TV_PRICE * 2,
-    owner: "Aldo Laras"
-  },
-
-  TV_B_3: {
-    unit: "TV_B",
-    durasi: 3,
-    durasiUnit: "hari",
-    nominal: TV_PRICE * 3,
-    owner: "Aldo Laras"
-  },
-
-  TV_B_4: {
-    unit: "TV_B",
-    durasi: 4,
-    durasiUnit: "hari",
-    nominal: TV_PRICE * 4,
-    owner: "Aldo Laras"
-  }
-};
-
-const selectedTv = tvPackages[tvUnit];
+      const selectedTv = TV_OWNERS[tvUnit]
+        ? {
+            unit: tvUnit,
+            durasi: tvDurasi,
+            durasiUnit: tvDurasiUnit,
+            nominal: tvNominal,
+            owner: TV_OWNERS[tvUnit]
+          }
+        : null;
 
 if (selectedTv) {
   const tvRentalRef = db.ref("rentals").push();
@@ -1345,7 +1281,7 @@ if (selectedTv) {
     createdBy: currentUser ? currentUser.role : "Admin",
     monthKey: monthKey,
     owner: selectedTv.owner,
-    sumberUnit: "tv_otomatis"
+    sumberUnit: "tv_manual"
   };
 
   updates["kasTransactions/" + tvKasRef.key] = {
@@ -1369,7 +1305,19 @@ if (selectedTv) {
         .then(function() {
           rentalForm.reset();
           resetFotoInput();
-          alert("Sewa berhasil disimpan!\n\nKas " + kasPersen + "%: " + formatRp(kasNominal) + "\nPendapatan bersih: " + formatRp(pendapatanBersih));
+          updateTvFields();
+
+          let pesan = "Sewa berhasil disimpan!\n\nKas " + kasPersen + "%: " + formatRp(kasNominal) +
+            "\nPendapatan bersih: " + formatRp(pendapatanBersih);
+
+          if (selectedTv) {
+            const tvKas = Math.round(selectedTv.nominal * KAS_PERCENT);
+            pesan += "\n\n" + selectedTv.unit.replace("_", " ") + ": " + formatRp(selectedTv.nominal) +
+              "\nKas 5%: " + formatRp(tvKas) +
+              "\nBersih " + selectedTv.owner + ": " + formatRp(selectedTv.nominal - tvKas);
+          }
+
+          alert(pesan);
         })
         .catch(function(error) {
           alert("Gagal menyimpan sewa: " + error.message);
@@ -1390,6 +1338,30 @@ if (selectedTv) {
     } else {
       saveData("");
     }
+  });
+}
+
+/* Tampilkan kolom durasi & nominal TV hanya kalau TV dipilih */
+function updateTvFields() {
+  const tvUnitEl = $("tvUnit");
+  const aktif = !!(tvUnitEl && tvUnitEl.value);
+
+  document.querySelectorAll(".tv-field").forEach(function(el) {
+    el.classList.toggle("hidden", !aktif);
+  });
+
+  ["tvDurasi", "tvNominal"].forEach(function(id) {
+    const el = $(id);
+    if (!el) return;
+    el.required = aktif;
+    if (!aktif) el.value = "";
+  });
+}
+
+if ($("tvUnit")) {
+  $("tvUnit").addEventListener("change", function() {
+    updateTvFields();
+    if (this.value && $("tvNominal")) $("tvNominal").focus();
   });
 }
 

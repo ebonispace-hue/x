@@ -303,7 +303,7 @@
             </div>
 
         <div class="form-group">
-  <label for="psUnit">Unit PS / TV</label>
+  <label for="psUnit">Unit PS</label>
 
   <select id="psUnit" required>
     <option value="">-- Pilih Unit --</option>
@@ -317,28 +317,10 @@
   </select>
 </div>
 
-       <div class="form-group">
-  <label for="tvUnit">Sewa TV (Opsional)</label>
-
-  <select id="tvUnit">
-    <option value="">-- Tidak Sewa TV --</option>
-
-    <option value="TV_A_12JAM">TV A · 12 Jam · Rp15.000</option>
-    <option value="TV_A_1">TV A · 1 Hari · Rp30.000</option>
-    <option value="TV_A_2">TV A · 2 Hari · Rp60.000</option>
-    <option value="TV_A_3">TV A · 3 Hari · Rp90.000</option>
-    <option value="TV_A_4">TV A · 4 Hari · Rp120.000</option>
-
-    <option value="TV_B_12JAM">TV B · 12 Jam · Rp15.000</option>
-    <option value="TV_B_1">TV B · 1 Hari · Rp30.000</option>
-    <option value="TV_B_2">TV B · 2 Hari · Rp60.000</option>
-    <option value="TV_B_3">TV B · 3 Hari · Rp90.000</option>
-    <option value="TV_B_4">TV B · 4 Hari · Rp120.000</option>
-  </select>
-</div>
+       
             
             <div class="form-group">
-              <label for="durasi">Durasi</label>
+              <label for="durasi">Durasi PS</label>
 
               <div class="durasi-row">
                 <input
@@ -357,7 +339,7 @@
             </div>
 
             <div class="form-group">
-              <label for="nominal">Nominal Sewa Kotor (Rp)</label>
+              <label for="nominal">Nominal Sewa PS (Rp)</label>
 
               <input
                 type="number"
@@ -365,6 +347,45 @@
                 min="1"
                 placeholder="50000"
                 required
+              >
+            </div>
+
+            <div class="form-group">
+  <label for="tvUnit">Sewa TV (Opsional)</label>
+
+  <select id="tvUnit">
+    <option value="">-- Tidak Sewa TV --</option>
+    <option value="TV_A">TV A · Adan Glena</option>
+    <option value="TV_B">TV B · Aldo Laras</option>
+  </select>
+</div>
+
+            <div class="form-group tv-field hidden">
+              <label for="tvDurasi">Durasi TV</label>
+
+              <div class="durasi-row">
+                <input
+                  type="number"
+                  id="tvDurasi"
+                  min="1"
+                  placeholder="1"
+                >
+
+                <select id="tvDurasiUnit">
+                  <option value="hari">Hari</option>
+                  <option value="jam">Jam</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group tv-field hidden">
+              <label for="tvNominal">Nominal Sewa TV (Rp)</label>
+
+              <input
+                type="number"
+                id="tvNominal"
+                min="1"
+                placeholder="Ketik nominal TV"
               >
             </div>
 
@@ -1039,7 +1060,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<script src="app.js?v=66"></script>
+<script src="app.js?v=67"></script>
 <script src="fx.js?v=1"></script>
 
 <script>
