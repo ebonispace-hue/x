@@ -21,7 +21,30 @@ Panel (GitHub Pages)  ──tulis──▶  Firebase: waOutbox/{id}  ◀──ba
 - Jeda acak 4–9 detik antarpesan, plus status "sedang mengetik".
 - Pesan yang lebih tua dari 24 jam tidak dikirim.
 
-## Pasang di Hostinger (Business / Cloud hosting)
+## Cara termudah & gratis: HP Android cadangan + Termux (disarankan)
+
+Pakai HP Android bekas yang diam di rumah, colok charger, dan sambungkan ke WiFi. Isi WhatsApp di HP itu dengan **nomor khusus bot**.
+
+1. Install **Termux** dari F-Droid (versi Play Store sudah lama tidak diperbarui).
+2. Buka Termux, lalu ketik:
+   ```
+   pkg install -y git
+   git clone https://github.com/ebonispace-hue/x.git
+   cd x/wa-bot
+   bash termux-setup.sh 628xxxxxxxxxx
+   ./start.sh
+   ```
+   Ganti `628xxxxxxxxxx` dengan nomor bot (diawali 62).
+3. Di layar akan muncul **KODE PAIRING** 8 huruf. Buka WhatsApp nomor bot → **Perangkat tertaut** → **Tautkan perangkat** → **Tautkan dengan nomor telepon saja**, lalu masukkan kodenya.
+4. Kalau muncul "WhatsApp tersambung", di panel akan tampil **Bot WA online**. Selesai.
+
+Tips supaya bot tidak mati:
+- Di pengaturan Android: **Baterai → Termux → Tanpa batasan / Jangan optimalkan**.
+- Biarkan notifikasi Termux tetap ada (wake-lock aktif).
+- Kalau HP restart, buka Termux lagi lalu jalankan `cd x/wa-bot && ./start.sh`.
+- Update kode bot: `cd x && git pull`, lalu jalankan ulang `./start.sh`.
+
+## Pasang di Hostinger (Business / Cloud hosting) — kalau paketnya mendukung
 
 Fitur **Node.js web app** hanya ada di paket **Business Web Hosting** dan **Cloud**. Paket Single dan Premium tidak bisa.
 

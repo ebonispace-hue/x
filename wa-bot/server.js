@@ -33,6 +33,9 @@ const {
 /* ---------- konfigurasi ---------- */
 const PORT = Number(process.env.PORT || 3000);
 const ADMIN_KEY = process.env.ADMIN_KEY || "ganti-kata-sandi-ini";
+// Nomor WA bot (format 628xxx). Kalau diisi, bot memakai KODE PAIRING (tanpa scan QR) —
+// cocok kalau bot jalan di HP yang sama dengan WhatsApp nomor bot.
+const BOT_NUMBER = String(process.env.BOT_NUMBER || "").replace(/\D/g, "").replace(/^0/, "62");
 const AUTH_DIR = path.join(__dirname, "auth");
 
 const MAX_PER_NOMOR_PER_HARI = 4;      // anti-spam
@@ -57,6 +60,7 @@ const db = getDatabase(initializeApp(firebaseConfig));
 let sock = null;
 let connected = false;
 let lastQr = "";
+let pairingCode = "";
 let myNumber = "";
 let knownCustomers = new Set();
 const queue = [];
@@ -124,16 +128,33 @@ async function startWhatsApp() {
 
   sock.ev.on("creds.update", saveCreds);
 
+  if (BOT_NUMBER && !state.creds.registered) {
+    setTimeout(async function() {
+      try {
+        const code = await sock.requestPairingCode(BOT_NUMBER);
+        pairingCode = code;
+        console.log("\n==============================");
+        console.log(" KODE PAIRING WHATSAPP: " + code);
+        console.log(" WhatsApp nomor bot > Perangkat tertaut > Tautkan perangkat");
+        console.log(" > Tautkan dengan nomor telepon saja > masukkan kode di atas");
+        console.log("==============================\n");
+      } catch (e) {
+        log("Gagal minta kode pairing:", e.message);
+      }
+    }, 4000);
+  }
+
   sock.ev.on("connection.update", function(u) {
     if (u.qr) {
       lastQr = u.qr;
-      log("QR baru tersedia di /qr?key=...");
+      if (!BOT_NUMBER) log("QR baru tersedia di /qr?key=...");
       heartbeat();
     }
 
     if (u.connection === "open") {
       connected = true;
       lastQr = "";
+      pairingCode = "";
       myNumber = ((sock.user && sock.user.id) || "").split(":")[0].split("@")[0];
       log("WhatsApp tersambung sebagai", myNumber);
       heartbeat();
@@ -267,6 +288,14 @@ const server = http.createServer(async function(req, res) {
     if (connected) {
       res.end('<meta name="viewport" content="width=device-width"><body style="font-family:sans-serif;padding:24px">' +
         "<h2>✅ Bot sudah tersambung</h2><p>Nomor: " + myNumber + "</p></body>");
+      return;
+    }
+
+    if (pairingCode) {
+      res.end('<meta name="viewport" content="width=device-width"><meta http-equiv="refresh" content="15">' +
+        '<body style="font-family:sans-serif;padding:24px;text-align:center"><h2>Kode pairing</h2>' +
+        '<p style="font-size:34px;letter-spacing:4px"><b>' + pairingCode + '</b></p>' +
+        "<p>WhatsApp nomor bot → Perangkat tertaut → Tautkan perangkat → <b>Tautkan dengan nomor telepon saja</b></p></body>");
       return;
     }
 
