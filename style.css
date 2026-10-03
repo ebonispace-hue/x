@@ -2401,3 +2401,114 @@ img.foto-thumb { cursor: zoom-in; }
 .header {
   background: rgba(6, 7, 20, 0.55);
 }
+
+/* =====================================================
+   v16 — PROGRAM BONUS JAM
+===================================================== */
+.loyalty-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border: 1px solid rgba(244, 213, 141, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  background: rgba(244, 213, 141, 0.06);
+  text-transform: none;
+}
+
+.loyalty-hint.hidden { display: none; }
+.loyalty-hint i { color: var(--gold); }
+.loyalty-hint strong { color: var(--gold); }
+
+.loyalty-search {
+  min-width: 0;
+  max-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.loyalty-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+  max-height: 620px;
+  overflow-y: auto;
+}
+
+.loyalty-row,
+.loyalty-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.loyalty-summary { margin-bottom: 14px; }
+
+.loyalty-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loyalty-head strong { font-size: 14px; }
+.loyalty-head span { color: var(--muted); font-size: 12px; }
+
+.loyalty-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.loyalty-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+}
+
+.loyalty-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.loyalty-bonus { color: var(--muted); }
+.loyalty-bonus.has { color: var(--mint); }
+
+.loyalty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-claim {
+  border-color: rgba(94, 234, 212, 0.45) !important;
+  color: var(--mint) !important;
+}
+
+#loyaltyModal textarea { width: 100%; text-transform: none; }
+
+#loyaltyModalSend { text-decoration: none; }
+
+@media (max-width: 720px) {
+  .loyalty-search { max-width: none; width: 100%; }
+  .loyalty-list { grid-template-columns: 1fr; }
+}

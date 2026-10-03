@@ -1,13 +1,14 @@
 // Service worker sederhana: network-first supaya update selalu terbaru,
 // cache hanya dipakai kalau sedang offline.
-const CACHE = "eboni-panel-v17";
+const CACHE = "eboni-panel-v18";
 const SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=15",
-  "./app.js?v=69",
+  "./style.css?v=16",
+  "./app.js?v=70",
   "./fx.js?v=1",
   "./nav.js?v=1",
+  "./loyalty.js?v=1",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/apple-touch-icon.png"

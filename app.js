@@ -359,6 +359,7 @@ function startDatabaseListeners() {
 
     allRentals = rentals;
     updateDashboard();
+    if (window.onRentalsUpdated) window.onRentalsUpdated();
     refreshExpenseSummary();
     refreshMonthlyRecap();
   }, databaseError);
@@ -1509,6 +1510,9 @@ if (selectedTv) {
           }
 
           alert(pesan);
+
+          // Program Bonus Jam: tawarkan kirim info poin ke WA pelanggan
+          if (window.onRentalSaved) window.onRentalSaved(nomor, rentalRef.key);
         })
         .catch(function(error) {
           alert("Gagal menyimpan sewa: " + error.message);

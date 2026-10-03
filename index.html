@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://ggyu-66f09-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=15">
+  <link rel="stylesheet" href="style.css?v=16">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -219,6 +219,7 @@
                 placeholder="Contoh: 08123456789"
                 required
               >
+              <div id="loyaltyHint" class="loyalty-hint hidden"></div>
             </div>
 
         <div class="form-group">
@@ -369,6 +370,21 @@
             </div>
           </div>
 
+        </div>
+      </section>
+
+      <section class="history-card loyalty-card">
+        <div class="card-title-row">
+          <h3><i class="fas fa-gift"></i> Program Bonus Jam</h3>
+          <input type="search" id="loyaltySearch" class="loyalty-search" placeholder="Cari nama / nomor">
+        </div>
+        <p class="card-subtext">
+          Setiap total sewa 72 jam = gratis 6 jam (tabungan maks. 12 jam). Min. 12 jam per sewa,
+          Mabar Puas 200rb dihitung 48 jam, sewa TV tidak dihitung.
+          <span id="loyaltyInfo"></span>
+        </p>
+        <div id="loyaltyList" class="loyalty-list">
+          <p class="empty">Memuat data...</p>
         </div>
       </section>
       </div>
@@ -1082,9 +1098,10 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<script src="app.js?v=69"></script>
+<script src="app.js?v=70"></script>
 <script src="fx.js?v=1"></script>
 <script src="nav.js?v=1"></script>
+<script src="loyalty.js?v=1"></script>
 
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
