@@ -23,7 +23,11 @@ const TV_OWNERS = {
   TV_A: "Adan Glena",
   TV_B: "Aldo Laras"
 };
-const MAX_FOTO_SIZE = 1.5 * 1024 * 1024;
+/* Foto: tidak ada batas ukuran upload.
+   Foto otomatis dikecilkan sebelum disimpan supaya database tetap ringan. */
+const FOTO_MAX_SIDE = 1280;      // sisi terpanjang (pixel)
+const FOTO_QUALITY = 0.8;        // kualitas JPEG
+const FOTO_MAX_SIMPAN = 900 * 1024; // target ukuran setelah dikompres
 
 let db = null;
 let firebaseReady = false;
@@ -1075,7 +1079,87 @@ function autoPayLoansFromKas() {
 
 if (autoPayLoanBtn) autoPayLoanBtn.addEventListener("click", autoPayLoansFromKas);
 
+/* Membaca file sebagai data URL */
+function readFileAsDataURL(file) {
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function(e) { resolve(e.target.result); };
+    reader.onerror = function() { reject(new Error("Foto gagal dibaca.")); };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* Memuat gambar dari file (pakai createImageBitmap kalau ada, lebih hemat memori) */
+function loadImageFromFile(file) {
+  if (window.createImageBitmap) {
+    return createImageBitmap(file, { imageOrientation: "from-image" })
+      .catch(function() { return createImageBitmap(file); })
+      .catch(function() { return loadImageElement(file); });
+  }
+  return loadImageElement(file);
+}
+
+function loadImageElement(file) {
+  return new Promise(function(resolve, reject) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = function() {
+      URL.revokeObjectURL(url);
+      reject(new Error("Format foto tidak didukung browser ini."));
+    };
+    img.src = url;
+  });
+}
+
+/* Kompres foto berapa pun ukurannya -> data URL JPEG kecil */
+function compressFoto(file) {
+  return loadImageFromFile(file).then(function(img) {
+    const w = img.width || img.naturalWidth;
+    const h = img.height || img.naturalHeight;
+    let side = FOTO_MAX_SIDE;
+    let quality = FOTO_QUALITY;
+    let result = "";
+
+    for (let i = 0; i < 6; i++) {
+      const scale = Math.min(1, side / Math.max(w, h));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(w * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      result = canvas.toDataURL("image/jpeg", quality);
+
+      // panjang base64 * 0.75 ≈ ukuran byte
+      if (result.length * 0.75 <= FOTO_MAX_SIMPAN) break;
+
+      side = Math.round(side * 0.8);
+      quality = Math.max(0.55, quality - 0.08);
+    }
+
+    if (img.close) img.close();
+    return result;
+  }).catch(function(error) {
+    // Kalau browser tidak bisa membuka formatnya (mis. HEIC di Android),
+    // simpan apa adanya selama masih wajar.
+    if (file.size <= 3 * 1024 * 1024) return readFileAsDataURL(file);
+    throw error;
+  });
+}
+
+let fotoCompressed = "";
+let fotoCompressing = null;
+
 function resetFotoInput() {
+  fotoCompressed = "";
+  fotoCompressing = null;
   if (fotoInput) fotoInput.value = "";
   if (fotoPreview) fotoPreview.src = "";
   if (fileName) fileName.textContent = "Pilih Foto dari Galeri / Kamera";
@@ -1093,20 +1177,27 @@ if (fotoInput) {
       return;
     }
 
-    if (file.size > MAX_FOTO_SIZE) {
-      alert("Ukuran foto maksimal 1.5 MB.");
-      resetFotoInput();
-      return;
-    }
+    if (fileName) fileName.textContent = file.name + " · memproses...";
+    fotoCompressed = "";
 
-    if (fileName) fileName.textContent = file.name;
+    const proses = compressFoto(file);
+    fotoCompressing = proses;
 
-    const reader = new FileReader();
-    reader.onload = function(loadEvent) {
-      if (fotoPreview) fotoPreview.src = loadEvent.target.result;
-      if (previewContainer) previewContainer.classList.remove("hidden");
-    };
-    reader.readAsDataURL(file);
+    proses
+      .then(function(dataUrl) {
+        if (fotoCompressing !== proses) return;
+        fotoCompressed = dataUrl;
+
+        const kb = Math.round(dataUrl.length * 0.75 / 1024);
+        if (fileName) fileName.textContent = file.name + " · siap (" + kb + " KB)";
+        if (fotoPreview) fotoPreview.src = dataUrl;
+        if (previewContainer) previewContainer.classList.remove("hidden");
+      })
+      .catch(function(error) {
+        if (fotoCompressing !== proses) return;
+        alert("Foto tidak bisa diproses: " + error.message + "\n\nCoba pilih foto lain atau ambil ulang dengan kamera.");
+        resetFotoInput();
+      });
   });
 }
 
@@ -1326,15 +1417,18 @@ if (selectedTv) {
     }
 
     if (file) {
-      const reader = new FileReader();
-      reader.onload = function(loadEvent) {
-        saveData(loadEvent.target.result);
-      };
-      reader.onerror = function() {
-        alert("Foto gagal dibaca.");
-        finish();
-      };
-      reader.readAsDataURL(file);
+      const siap = fotoCompressed
+        ? Promise.resolve(fotoCompressed)
+        : (fotoCompressing || compressFoto(file));
+
+      siap
+        .then(function(dataUrl) {
+          saveData(dataUrl);
+        })
+        .catch(function(error) {
+          alert("Foto gagal diproses: " + error.message);
+          finish();
+        });
     } else {
       saveData("");
     }

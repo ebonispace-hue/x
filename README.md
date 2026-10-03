@@ -133,7 +133,7 @@ ps-rental-dashboard/
 - Foto disimpan di Firebase Storage (folder `penyewa/`)
 - Data sewa disimpan di collection Firestore `rentals`
 - Session login disimpan di `sessionStorage` (hilang saat tab ditutup)
-- Ukuran foto maksimal 5 MB
+- Foto tidak dibatasi ukurannya; otomatis dikecilkan (maks 1280px, ±900 KB) sebelum disimpan
 - Semua update bersifat **realtime** (onSnapshot)
 
 ---
