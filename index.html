@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="icons/favicon-64.png">
 
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -71,6 +71,15 @@
         <span>Panel Omset Sewa PS</span>
       </div>
 
+      <nav class="top-nav" aria-label="Menu halaman">
+        <a href="#dashboard" class="nav-link" data-nav="dashboard"><i class="fas fa-chart-pie"></i><span>Home</span></a>
+        <a href="#sewa" class="nav-link" data-nav="sewa"><i class="fas fa-gamepad"></i><span>Sewa</span></a>
+        <a href="#kas" class="nav-link" data-nav="kas"><i class="fas fa-wallet"></i><span>Kas</span></a>
+        <a href="#loan" class="nav-link" data-nav="loan"><i class="fas fa-hand-holding-dollar"></i><span>Loan</span></a>
+        <a href="#pengeluaran" class="nav-link" data-nav="pengeluaran"><i class="fas fa-money-bill-transfer"></i><span>Keluar</span></a>
+        <a href="#rekap" class="nav-link" data-nav="rekap"><i class="fas fa-calendar-days"></i><span>Rekap</span></a>
+      </nav>
+
       <div class="header-right">
         <span id="userRole" class="badge"></span>
 
@@ -82,7 +91,8 @@
 
     <main class="main-content">
 
-      <!-- BULAN AKTIF -->
+      <!-- ================= HOME / DASHBOARD ================= -->
+      <div class="page" data-page="dashboard">
       <section class="month-banner">
         <i class="fas fa-calendar-alt"></i>
 
@@ -96,20 +106,33 @@
         </small>
       </section>
 
-     <!-- OMSET -->
-<section class="totals-section">
+      <section class="dash-hero">
+        <div class="hero-main total-card card-gross">
+          <div class="total-icon"><i class="fas fa-sack-dollar"></i></div>
+          <div class="total-info">
+            <span class="total-label">Total Omset Kotor Bulan Ini</span>
+            <strong id="totalGross" class="total-value">Rp 0</strong>
+          </div>
+        </div>
+      <div class="total-card kas-saldo-card">
+        <div class="total-icon"><i class="fas fa-wallet"></i></div>
+        <div class="total-info">
+          <span class="total-label">Saldo Kas</span>
+          <span class="total-value" id="dashKasSaldo">Rp 0</span>
+        </div>
+      </div>
+      <div class="total-card kas-loan-sisa-card">
+        <div class="total-icon"><i class="fas fa-scale-unbalanced"></i></div>
+        <div class="total-info">
+          <span class="total-label">Sisa Loan</span>
+          <span class="total-value" id="dashKasLoanSisa">Rp 0</span>
+          <span class="total-sub" id="dashKasLoanInfo">Total loan Rp 0</span>
+        </div>
+      </div>
+      </section>
 
-  <div class="total-card card-a">
-    <div class="total-icon">
-      <i class="fas fa-tv"></i>
-    </div>
-
-    <div class="total-info">
-      <span class="total-label">Omset Bersih Glena Adan</span>
-      <span class="total-value" id="totalAC">Rp 0</span>
-    </div>
-  </div>
-
+      <h3 class="group-title"><i class="fas fa-users"></i> Omset Bersih per Pemilik</h3>
+      <section class="totals-section">
   <div class="total-card card-b">
     <div class="total-icon">
       <i class="fas fa-desktop"></i>
@@ -120,7 +143,16 @@
       <span class="total-value" id="totalB">Rp 0</span>
     </div>
   </div>
+  <div class="total-card card-a">
+    <div class="total-icon">
+      <i class="fas fa-tv"></i>
+    </div>
 
+    <div class="total-info">
+      <span class="total-label">Omset Bersih Glena Adan</span>
+      <span class="total-value" id="totalAC">Rp 0</span>
+    </div>
+  </div>
   <div class="total-card card-all">
     <div class="total-icon">
       <i class="fas fa-coins"></i>
@@ -131,157 +163,39 @@
       <span class="total-value" id="totalAll">Rp 0</span>
     </div>
   </div>
-
-  <div class="total-card card-gross">
-    <div class="total-icon">
-      <i class="fas fa-coins"></i>
-    </div>
-
-    <div class="total-info">
-      <span class="total-label">Total Omset Kotor</span>
-      <strong id="totalGross" class="total-value">Rp 0</strong>
-    </div>
-  </div>
-
-</section>
-
-      <!-- KAS -->
-  <section class="kas-section">
-  <div class="section-heading">
-    <div>
-      <h2>
-        <i class="fas fa-wallet"></i>
-        Kas Usaha
-      </h2>
-
-    <p>
-  Kas masuk dari transaksi sewa dan loan.
-  Pengeluaran mengurangi saldo kas.
-</p>
-    </div>
-
-    <div class="heading-actions">
-      <button type="button" id="openLoanModal" class="btn-primary">
-        <i class="fas fa-hand-holding-dollar"></i>
-        Tambah Loan
-      </button>
-
-      <button type="button" id="openPayLoanModal" class="btn-secondary">
-        <i class="fas fa-money-check-dollar"></i>
-        Bayar Loan
-      </button>
-    </div>
-  </div>
-        <div class="history-card" style="margin-top:16px;">
-  <div class="card-title-row">
-    <h3>
-      <i class="fas fa-receipt"></i>
-      Riwayat Kas dari Awal
-    </h3>
-
-    <div class="card-title-actions">
-      <button type="button" id="toggleKasOrder" class="btn-mini" title="Ubah urutan">
-        <i class="fas fa-arrow-down-short-wide"></i>
-        <span id="kasOrderLabel">Terlama dulu</span>
-      </button>
-
-      <button type="button" id="downloadKasHistory" class="btn-mini" title="Download Excel">
-        <i class="fas fa-file-excel"></i>
-        Download
-      </button>
-    </div>
-  </div>
-
-  <p class="card-subtext" id="kasHistoryInfo">Semua transaksi kas sejak awal, lengkap dengan saldo setelah transaksi.</p>
-
-  <div id="kasHistory" class="history-list kas-history-scroll">
-    <p class="empty">Belum ada transaksi kas</p>
-  </div>
-</div>
-        <div class="kas-grid">
-
-          <div class="total-card kas-loan-card">
-  <div class="total-icon">
-    <i class="fas fa-hand-holding-dollar"></i>
-  </div>
-
-  <div class="total-info">
-    <span class="total-label">Total Loan Masuk</span>
-    <span class="total-value" id="kasLoan">Rp 0</span>
-  </div>
-</div>
-          <div class="total-card kas-loan-sisa-card">
-            <div class="total-icon">
-              <i class="fas fa-scale-unbalanced"></i>
-            </div>
-
-            <div class="total-info">
-              <span class="total-label">Sisa Loan Belum Dibayar</span>
-              <span class="total-value" id="kasLoanSisa">Rp 0</span>
-              <span class="total-sub" id="kasLoanDibayar">Sudah dibayar Rp 0</span>
-            </div>
-          </div>
-          <div class="total-card kas-saldo-card">
-            <div class="total-icon">
-              <i class="fas fa-wallet"></i>
-            </div>
-
-            <div class="total-info">
-              <span class="total-label">Saldo Kas Berjalan</span>
-              <span class="total-value" id="kasSaldo">Rp 0</span>
-            </div>
-          </div>
-
-          <div class="total-card kas-masuk-card">
-            <div class="total-icon">
-              <i class="fas fa-arrow-down"></i>
-            </div>
-
-            <div class="total-info">
-              <span class="total-label">Total Kas Masuk</span>
-              <span class="total-value" id="kasMasuk">Rp 0</span>
-            </div>
-          </div>
-
-          <div class="total-card kas-keluar-card">
-            <div class="total-icon">
-              <i class="fas fa-arrow-up"></i>
-            </div>
-
-            <div class="total-info">
-              <span class="total-label">Total Kas Keluar</span>
-              <span class="total-value" id="kasKeluar">Rp 0</span>
-            </div>
-          </div>
+      <div class="total-card kas-loan-card">
+        <div class="total-icon"><i class="fas fa-hand-holding-dollar"></i></div>
+        <div class="total-info">
+          <span class="total-label">Total Loan Masuk</span>
+          <span class="total-value" id="dashKasLoan">Rp 0</span>
         </div>
+      </div>
+      </section>
 
-        <div class="history-card" style="margin-top:16px;">
-          <div class="card-title-row">
-            <h3>
-              <i class="fas fa-file-invoice-dollar"></i>
-              Daftar Loan
-            </h3>
-
-            <div class="card-title-actions">
-              <button type="button" id="autoPayLoanBtn" class="btn-mini" title="Bayar loan otomatis dari saldo kas">
-                <i class="fas fa-bolt"></i>
-                Bayar Otomatis dari Kas
-              </button>
-            </div>
-          </div>
-
-          <p class="card-subtext">
-            Pembayaran loan otomatis diambil dari saldo kas (tercatat sebagai kas keluar).
-            "Bayar Otomatis" melunasi loan terlama dulu sebesar saldo kas yang tersedia.
-          </p>
-
-          <div id="loanList" class="history-list">
-            <p class="empty">Belum ada loan</p>
-          </div>
+      <section class="history-card share-card">
+        <div class="card-title-row">
+          <h3><i class="fas fa-chart-simple"></i> Perbandingan Omset Bersih</h3>
+        </div>
+        <div class="share-bar" aria-hidden="true">
+          <span class="share-aldo" id="shareAldoBar" style="width:50%"></span>
+          <span class="share-glena" id="shareGlenaBar" style="width:50%"></span>
+        </div>
+        <div class="share-legend">
+          <span><i class="dot dot-aldo"></i> Aldo Laras <b id="shareAldoPct">0%</b></span>
+          <span><i class="dot dot-glena"></i> Glena Adan <b id="shareGlenaPct">0%</b></span>
         </div>
       </section>
 
-      <!-- FORM SEWA -->
+      <section class="quick-actions">
+        <a href="#sewa" class="quick-btn"><i class="fas fa-plus-circle"></i> Input Sewa</a>
+        <a href="#kas" class="quick-btn"><i class="fas fa-wallet"></i> Lihat Kas</a>
+        <a href="#loan" class="quick-btn"><i class="fas fa-hand-holding-dollar"></i> Tambah Loan</a>
+        <a href="#pengeluaran" class="quick-btn"><i class="fas fa-minus-circle"></i> Pengeluaran</a>
+      </section>
+      </div>
+
+      <!-- ================= INPUT SEWA ================= -->
+      <div class="page" data-page="sewa" hidden>
       <section class="form-section">
         <h2>
           <i class="fas fa-plus-circle"></i>
@@ -425,63 +339,6 @@
         </form>
       </section>
 
-      <!-- PENGELUARAN -->
-      <section class="expense-section">
-        <div class="section-heading">
-          <div>
-            <h2>
-              <i class="fas fa-money-bill-transfer"></i>
-              Pengeluaran Usaha
-            </h2>
-
-            <p>
-              Pengeluaran akan otomatis mengurangi saldo kas.
-            </p>
-          </div>
-
-          <button type="button" id="openExpenseModal" class="btn-danger">
-            <i class="fas fa-minus-circle"></i>
-            Tambah Pengeluaran
-          </button>
-        </div>
-
-        <div class="expense-summary-grid">
-          <div class="total-card expense-total-card">
-            <div class="total-icon">
-              <i class="fas fa-arrow-up"></i>
-            </div>
-
-            <div class="total-info">
-              <span class="total-label">Pengeluaran Bulan Ini</span>
-              <span class="total-value" id="totalExpenses">Rp 0</span>
-            </div>
-          </div>
-
-          <div class="total-card net-income-card">
-            <div class="total-icon">
-              <i class="fas fa-scale-balanced"></i>
-            </div>
-
-            <div class="total-info">
-              <span class="total-label">Sisa Pendapatan Bulan Ini</span>
-              <span class="total-value" id="netIncome">Rp 0</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="history-card">
-          <h3>
-            <i class="fas fa-list"></i>
-            Riwayat Pengeluaran
-          </h3>
-
-          <div id="expenseHistory" class="history-list">
-            <p class="empty">Belum ada pengeluaran</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- HISTORY -->
       <section class="history-section">
         <div class="history-grid">
 
@@ -509,8 +366,279 @@
 
         </div>
       </section>
+      </div>
 
-      <!-- REKAP BULANAN -->
+      <!-- ================= KAS ================= -->
+      <div class="page" data-page="kas" hidden>
+      <div class="page-head">
+        <h2><i class="fas fa-wallet"></i> Kas Usaha</h2>
+        <p>Kas masuk dari transaksi sewa dan loan. Pengeluaran &amp; bayar loan mengurangi saldo kas.</p>
+      </div>
+      <section class="kas-grid kas-grid-3">
+          <div class="total-card kas-saldo-card">
+            <div class="total-icon">
+              <i class="fas fa-wallet"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Saldo Kas Berjalan</span>
+              <span class="total-value" id="kasSaldo">Rp 0</span>
+            </div>
+          </div>
+          <div class="total-card kas-masuk-card">
+            <div class="total-icon">
+              <i class="fas fa-arrow-down"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Total Kas Masuk</span>
+              <span class="total-value" id="kasMasuk">Rp 0</span>
+            </div>
+          </div>
+          <div class="total-card kas-keluar-card">
+            <div class="total-icon">
+              <i class="fas fa-arrow-up"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Total Kas Keluar</span>
+              <span class="total-value" id="kasKeluar">Rp 0</span>
+            </div>
+          </div>
+      </section>
+      <section class="kas-section">
+        <div class="history-card" >
+  <div class="card-title-row">
+    <h3>
+      <i class="fas fa-receipt"></i>
+      Riwayat Kas dari Awal
+    </h3>
+
+    <div class="card-title-actions">
+      <button type="button" id="toggleKasOrder" class="btn-mini" title="Ubah urutan">
+        <i class="fas fa-arrow-down-short-wide"></i>
+        <span id="kasOrderLabel">Terlama dulu</span>
+      </button>
+
+      <button type="button" id="downloadKasHistory" class="btn-mini" title="Download Excel">
+        <i class="fas fa-file-excel"></i>
+        Download
+      </button>
+    </div>
+  </div>
+
+  <p class="card-subtext" id="kasHistoryInfo">Semua transaksi kas sejak awal, lengkap dengan saldo setelah transaksi.</p>
+
+  <div id="kasHistory" class="history-list kas-history-scroll">
+    <p class="empty">Belum ada transaksi kas</p>
+  </div>
+</div>
+      </section>
+      </div>
+
+      <!-- ================= LOAN ================= -->
+      <div class="page" data-page="loan" hidden>
+      <div class="page-head">
+        <h2><i class="fas fa-hand-holding-dollar"></i> Loan</h2>
+        <p>Loan menambah saldo kas dan tidak dihitung sebagai omset sewa.</p>
+      </div>
+      <section class="kas-grid kas-grid-2">
+          <div class="total-card kas-loan-card">
+  <div class="total-icon">
+    <i class="fas fa-hand-holding-dollar"></i>
+  </div>
+
+  <div class="total-info">
+    <span class="total-label">Total Loan Masuk</span>
+    <span class="total-value" id="kasLoan">Rp 0</span>
+  </div>
+</div>
+          <div class="total-card kas-loan-sisa-card">
+            <div class="total-icon">
+              <i class="fas fa-scale-unbalanced"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Sisa Loan Belum Dibayar</span>
+              <span class="total-value" id="kasLoanSisa">Rp 0</span>
+              <span class="total-sub" id="kasLoanDibayar">Sudah dibayar Rp 0</span>
+            </div>
+          </div>
+      </section>
+
+      <section class="form-section">
+        <div class="card-title-row">
+          <h2><i class="fas fa-plus-circle"></i> Tambah Loan</h2>
+          <button type="button" id="openPayLoanModal" class="btn-secondary">
+            <i class="fas fa-money-check-dollar"></i>
+            Bayar Loan
+          </button>
+        </div>
+      <form id="loanForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="loanNominal">Nominal Loan (Rp)</label>
+
+            <input
+              type="number"
+              id="loanNominal"
+              min="1"
+              placeholder="Contoh: 100000"
+              required
+            >
+          </div>
+
+          <div class="form-group full-width">
+            <label for="loanKeterangan">Keterangan Loan</label>
+
+            <textarea
+              id="loanKeterangan"
+              rows="4"
+              maxlength="300"
+              placeholder="Contoh: Tambahan modal kas."
+              required
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="form-note">
+          <i class="fas fa-circle-info"></i>
+          Loan menambah saldo kas dan tidak dihitung sebagai omzet sewa.
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelLoan" class="btn-secondary">
+            Reset
+          </button>
+
+          <button type="submit" id="saveLoanBtn" class="btn-primary">
+            <i class="fas fa-save"></i>
+            Simpan Loan
+          </button>
+        </div>
+      </form>
+      </section>
+
+      <section class="kas-section">
+        <div class="history-card" >
+          <div class="card-title-row">
+            <h3>
+              <i class="fas fa-file-invoice-dollar"></i>
+              Daftar Loan
+            </h3>
+
+            <div class="card-title-actions">
+              <button type="button" id="autoPayLoanBtn" class="btn-mini" title="Bayar loan otomatis dari saldo kas">
+                <i class="fas fa-bolt"></i>
+                Bayar Otomatis dari Kas
+              </button>
+            </div>
+          </div>
+
+          <p class="card-subtext">
+            Pembayaran loan otomatis diambil dari saldo kas (tercatat sebagai kas keluar).
+            "Bayar Otomatis" melunasi loan terlama dulu sebesar saldo kas yang tersedia.
+          </p>
+
+          <div id="loanList" class="history-list">
+            <p class="empty">Belum ada loan</p>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <!-- ================= PENGELUARAN ================= -->
+      <div class="page" data-page="pengeluaran" hidden>
+      <div class="page-head">
+        <h2><i class="fas fa-money-bill-transfer"></i> Pengeluaran Usaha</h2>
+        <p>Pengeluaran otomatis mengurangi saldo kas.</p>
+      </div>
+      <section class="expense-section">
+        <div class="expense-summary-grid">
+          <div class="total-card expense-total-card">
+            <div class="total-icon">
+              <i class="fas fa-arrow-up"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Pengeluaran Bulan Ini</span>
+              <span class="total-value" id="totalExpenses">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="total-card net-income-card">
+            <div class="total-icon">
+              <i class="fas fa-scale-balanced"></i>
+            </div>
+
+            <div class="total-info">
+              <span class="total-label">Sisa Pendapatan Bulan Ini</span>
+              <span class="total-value" id="netIncome">Rp 0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2><i class="fas fa-minus-circle"></i> Tambah Pengeluaran</h2>
+      <form id="expenseForm">
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label for="expenseNominal">Nominal Pengeluaran (Rp)</label>
+
+            <input
+              type="number"
+              id="expenseNominal"
+              min="1"
+              placeholder="Contoh: 20000"
+              required
+            >
+          </div>
+
+          <div class="form-group full-width">
+            <label for="expenseKeterangan">Keterangan Pengeluaran</label>
+
+            <textarea
+              id="expenseKeterangan"
+              rows="4"
+              maxlength="300"
+              placeholder="Contoh: isi game, repasta PS."
+              required
+            ></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelExpense" class="btn-secondary">
+            Reset
+          </button>
+
+          <button type="submit" id="saveExpenseBtn" class="btn-danger">
+            <i class="fas fa-save"></i>
+            Simpan Pengeluaran
+          </button>
+        </div>
+      </form>
+      </section>
+
+      <section class="expense-section">
+        <div class="history-card">
+          <h3>
+            <i class="fas fa-list"></i>
+            Riwayat Pengeluaran
+          </h3>
+
+          <div id="expenseHistory" class="history-list">
+            <p class="empty">Belum ada pengeluaran</p>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <!-- ================= REKAP ================= -->
+      <div class="page" data-page="rekap" hidden>
       <section class="monthly-section">
         <div class="section-heading">
           <div>
@@ -596,129 +724,18 @@
           </div>
         </div>
       </section>
+      </div>
 
     </main>
-  </div>
 
-  <!-- MODAL PENGELUARAN -->
-  <div id="expenseModal" class="modal hidden">
-    <div class="modal-overlay" id="expenseModalOverlay"></div>
-
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>
-          <i class="fas fa-minus-circle"></i>
-          Tambah Pengeluaran
-        </h3>
-
-        <button type="button" id="closeExpenseModal" class="btn-icon">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <form id="expenseForm">
-        <div class="form-grid">
-
-          <div class="form-group">
-            <label for="expenseNominal">Nominal Pengeluaran (Rp)</label>
-
-            <input
-              type="number"
-              id="expenseNominal"
-              min="1"
-              placeholder="Contoh: 20000"
-              required
-            >
-          </div>
-
-          <div class="form-group full-width">
-            <label for="expenseKeterangan">Keterangan Pengeluaran</label>
-
-            <textarea
-              id="expenseKeterangan"
-              rows="4"
-              maxlength="300"
-              placeholder="Contoh: isi game, repasta PS."
-              required
-            ></textarea>
-          </div>
-
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" id="cancelExpense" class="btn-secondary">
-            Batal
-          </button>
-
-          <button type="submit" id="saveExpenseBtn" class="btn-danger">
-            <i class="fas fa-save"></i>
-            Simpan Pengeluaran
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL LOAN -->
-  <div id="loanModal" class="modal hidden">
-    <div class="modal-overlay" id="loanModalOverlay"></div>
-
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>
-          <i class="fas fa-hand-holding-dollar"></i>
-          Tambah Loan
-        </h3>
-
-        <button type="button" id="closeLoanModal" class="btn-icon">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <form id="loanForm">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="loanNominal">Nominal Loan (Rp)</label>
-
-            <input
-              type="number"
-              id="loanNominal"
-              min="1"
-              placeholder="Contoh: 100000"
-              required
-            >
-          </div>
-
-          <div class="form-group full-width">
-            <label for="loanKeterangan">Keterangan Loan</label>
-
-            <textarea
-              id="loanKeterangan"
-              rows="4"
-              maxlength="300"
-              placeholder="Contoh: Tambahan modal kas."
-              required
-            ></textarea>
-          </div>
-        </div>
-
-        <div class="form-note">
-          <i class="fas fa-circle-info"></i>
-          Loan menambah saldo kas dan tidak dihitung sebagai omzet sewa.
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" id="cancelLoan" class="btn-secondary">
-            Batal
-          </button>
-
-          <button type="submit" id="saveLoanBtn" class="btn-primary">
-            <i class="fas fa-save"></i>
-            Simpan Loan
-          </button>
-        </div>
-      </form>
-    </div>
+      <nav class="bottom-nav" aria-label="Menu halaman">
+        <a href="#dashboard" class="nav-link" data-nav="dashboard"><i class="fas fa-chart-pie"></i><span>Home</span></a>
+        <a href="#sewa" class="nav-link" data-nav="sewa"><i class="fas fa-gamepad"></i><span>Sewa</span></a>
+        <a href="#kas" class="nav-link" data-nav="kas"><i class="fas fa-wallet"></i><span>Kas</span></a>
+        <a href="#loan" class="nav-link" data-nav="loan"><i class="fas fa-hand-holding-dollar"></i><span>Loan</span></a>
+        <a href="#pengeluaran" class="nav-link" data-nav="pengeluaran"><i class="fas fa-money-bill-transfer"></i><span>Keluar</span></a>
+        <a href="#rekap" class="nav-link" data-nav="rekap"><i class="fas fa-calendar-days"></i><span>Rekap</span></a>
+      </nav>
   </div>
 
   
@@ -1062,6 +1079,7 @@
 
 <script src="app.js?v=68"></script>
 <script src="fx.js?v=1"></script>
+<script src="nav.js?v=1"></script>
 
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {

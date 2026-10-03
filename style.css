@@ -2039,3 +2039,300 @@ input[type="number"]::-webkit-outer-spin-button {
 .modal-header .heading-actions > * {
   flex: 0 0 auto;
 }
+
+/* =====================================================
+   v13 — TAMPILAN CLEAN MULTI-HALAMAN
+   Home (ringkasan) · Sewa · Kas · Loan · Pengeluaran · Rekap
+===================================================== */
+.page[hidden] { display: none !important; }
+
+.page > section,
+.page > .page-head,
+.page > .group-title {
+  margin-bottom: 22px;
+}
+
+.page { animation: pageIn 0.45s var(--ease-out) both; }
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- Header + menu atas ---------- */
+.header {
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.top-nav {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.25s ease, background 0.25s ease;
+}
+
+.nav-link i { font-size: 13px; }
+
+.nav-link:hover { color: var(--ink); background: rgba(255, 255, 255, 0.05); }
+
+.nav-link.active {
+  color: #1a1206;
+  background: linear-gradient(135deg, #fff1c9, var(--gold) 55%, var(--gold-deep));
+  box-shadow: 0 6px 18px -8px rgba(244, 213, 141, 0.7);
+}
+
+/* ---------- Menu bawah (HP) ---------- */
+.bottom-nav { display: none; }
+
+/* ---------- Judul halaman ---------- */
+.page-head h2,
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.page-head h2 i,
+.group-title i { color: var(--gold); }
+
+.page-head p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-transform: none;
+}
+
+.group-title {
+  margin-top: 6px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+/* ---------- Home: kartu utama ---------- */
+.dash-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dash-hero .hero-main {
+  min-height: 150px;
+}
+
+.dash-hero .hero-main .total-value {
+  font-size: clamp(28px, 4vw, 40px);
+}
+
+.dash-hero .hero-main .total-icon {
+  width: 62px;
+  height: 62px;
+  flex-basis: 62px;
+  font-size: 24px;
+}
+
+.card-gross { --accent: var(--mint); --accent-2: var(--cyan); }
+
+/* Bar perbandingan Aldo vs Glena */
+.share-card { padding: 20px 22px; }
+
+.share-bar {
+  display: flex;
+  height: 14px;
+  margin: 18px 0 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.share-bar span { height: 100%; transition: width 0.9s var(--ease-out); }
+.share-aldo { background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+.share-glena { background: linear-gradient(90deg, var(--violet), var(--fuchsia)); }
+
+.share-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 18px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.share-legend b { margin-left: 4px; color: #fff; font-family: var(--font-display); }
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+
+.dot-aldo { background: var(--cyan); }
+.dot-glena { background: var(--fuchsia); }
+
+/* Tombol pintas */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.035);
+  transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+}
+
+.quick-btn i { color: var(--gold); }
+
+.quick-btn:hover {
+  border-color: rgba(244, 213, 141, 0.45);
+  background: rgba(244, 213, 141, 0.07);
+  transform: translateY(-2px);
+}
+
+/* Grid kas / loan per halaman */
+.kas-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kas-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.page .form-section .card-title-row {
+  margin-bottom: 20px;
+}
+
+.page .form-section .card-title-row h2 { margin: 0; }
+
+.page .form-section .modal-actions { margin-top: 18px; }
+
+/* Lebih tenang: efek hover dikurangi supaya terasa clean */
+.total-card:hover { transform: translateY(-2px); }
+.total-card:hover .total-icon { transform: none; }
+
+@media (max-width: 1060px) {
+  .top-nav { order: 3; flex-basis: 100%; }
+  .dash-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash-hero .hero-main { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  .top-nav { display: none; }
+
+  .bottom-nav {
+    position: fixed;
+    z-index: 45;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    padding: 6px 4px calc(6px + var(--safe-bottom));
+    border-top: 1px solid var(--line);
+    background: rgba(6, 7, 20, 0.86);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+  }
+
+  .bottom-nav .nav-link {
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 2px;
+    border-radius: 12px;
+    font-size: 10px;
+    letter-spacing: 0.2px;
+  }
+
+  .bottom-nav .nav-link i { font-size: 17px; }
+
+  .bottom-nav .nav-link.active {
+    color: var(--gold);
+    background: rgba(244, 213, 141, 0.1);
+    box-shadow: none;
+  }
+
+  .main-content {
+    margin-bottom: calc(96px + var(--safe-bottom));
+  }
+
+  .dash-hero,
+  .kas-grid-3,
+  .kas-grid-2 {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .dash-hero .hero-main { min-height: 120px; }
+
+  .dash-hero .total-card:not(.hero-main),
+  .page[data-page="dashboard"] .totals-section .total-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .page[data-page="dashboard"] .totals-section {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dash-hero .total-card:not(.hero-main) .total-value,
+  .page[data-page="dashboard"] .totals-section .total-value {
+    font-size: 18px;
+  }
+
+  .kas-grid-3 .kas-saldo-card { grid-column: 1 / -1; }
+
+  .kas-grid-2 .total-card,
+  .kas-grid-3 .total-card:not(.kas-saldo-card) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .kas-grid-2 .total-value,
+  .kas-grid-3 .total-card:not(.kas-saldo-card) .total-value { font-size: 18px; }
+
+  .quick-actions { grid-template-columns: 1fr 1fr; }
+
+  .page-head h2 { font-size: 19px; }
+
+  .page .form-section .modal-actions { flex-direction: column-reverse; }
+  .page .form-section .modal-actions button { width: 100%; }
+}
