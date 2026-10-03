@@ -1,0 +1,19 @@
+{
+  "name": "eboni-wa-bot",
+  "version": "1.0.0",
+  "description": "Bot WhatsApp Eboni Space: kirim pesan dari antrian Firebase (waOutbox)",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "6.7.24",
+    "firebase": "^12.3.0",
+    "pino": "^9.0.0",
+    "qrcode": "^1.5.4"
+  }
+}

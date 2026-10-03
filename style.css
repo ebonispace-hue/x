@@ -2512,3 +2512,40 @@ img.foto-thumb { cursor: zoom-in; }
   .loyalty-search { max-width: none; width: 100%; }
   .loyalty-list { grid-template-columns: 1fr; }
 }
+
+/* ---------- Bot WA ---------- */
+.bot-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.bot-pill.on { color: var(--mint); border-color: rgba(94, 234, 212, 0.45); }
+.bot-pill.off { color: var(--muted); }
+
+.loyalty-toast {
+  position: fixed;
+  z-index: 300;
+  left: 50%;
+  bottom: calc(90px + var(--safe-bottom));
+  max-width: calc(100% - 32px);
+  padding: 12px 16px;
+  border: 1px solid rgba(94, 234, 212, 0.45);
+  border-radius: 14px;
+  color: var(--ink);
+  font-size: 13px;
+  text-transform: none;
+  background: rgba(8, 10, 28, 0.95);
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.loyalty-toast.show { opacity: 1; transform: translate(-50%, 0); }

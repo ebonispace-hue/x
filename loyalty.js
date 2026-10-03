@@ -165,6 +165,80 @@
     return lines.join("\n");
   }
 
+  /* ---------- Bot WA (server Hostinger) ---------- */
+  let botStatus = null;
+  let botStarted = false;
+
+  function botOnline() {
+    return !!(botStatus && botStatus.online && Date.now() - Number(botStatus.lastSeen || 0) < 3 * 60 * 1000);
+  }
+
+  function renderBotPill() {
+    let pill = $id("botPill");
+    const head = document.querySelector(".loyalty-card .card-title-row");
+    if (!pill && head) {
+      pill = document.createElement("span");
+      pill.id = "botPill";
+      pill.className = "bot-pill";
+      head.insertBefore(pill, head.children[1] || null);
+    }
+    if (!pill) return;
+    const on = botOnline();
+    pill.className = "bot-pill " + (on ? "on" : "off");
+    pill.innerHTML = '<i class="fas fa-robot"></i> Bot WA ' + (on ? "online" : "offline");
+    pill.title = on
+      ? "Pesan Bonus Jam dikirim otomatis dari nomor " + (botStatus.number ? "0" + String(botStatus.number).slice(2) : "bot")
+      : "Bot belum aktif: pesan dikirim manual lewat tombol WhatsApp";
+  }
+
+  function startBotWatch() {
+    if (botStarted || typeof db === "undefined" || !db) return;
+    botStarted = true;
+    db.ref("waBot/status").on("value", function(snap) {
+      botStatus = snap.val();
+      renderBotPill();
+    });
+    setInterval(renderBotPill, 60 * 1000);
+  }
+
+  function toast(msg) {
+    let el = $id("loyaltyToast");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "loyaltyToast";
+      el.className = "loyalty-toast";
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(el.__t);
+    el.__t = setTimeout(function() { el.classList.remove("show"); }, 3500);
+  }
+
+  function queueMessage(phone, text, source) {
+    return db.ref("waOutbox").push({
+      phone: phone,
+      text: text,
+      source: source || "manual",
+      status: "pending",
+      createdAt: Date.now(),
+      createdBy: (typeof currentUser !== "undefined" && currentUser) ? currentUser.role : "Admin"
+    });
+  }
+
+  function claimMessage(st) {
+    const sisa = Math.max(0, st.tabungan - 1) * BONUS_JAM;
+    return [
+      "Halo Kak 👋",
+      "Bonus *GRATIS " + BONUS_JAM + " jam* dari Program Bonus Jam *Eboni Space* sudah dipakai ya. Selamat main! 🎮",
+      "",
+      "🎁 Sisa bonus: *" + sisa + " jam*",
+      "📊 Jam terkumpul: *" + st.progress + "/" + TARGET_JAM + " jam*",
+      "",
+      "Terima kasih sudah langganan 🙏"
+    ].join("\n");
+  }
+
   function waLink(phone, text) {
     return "https://wa.me/" + phone + "?text=" + encodeURIComponent(text);
   }
@@ -191,7 +265,8 @@
         '</div>' +
         '<div class="modal-actions">' +
           '<button type="button" class="btn-secondary" data-close="1">Nanti saja</button>' +
-          '<a id="loyaltyModalSend" class="btn-primary" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Kirim via WhatsApp</a>' +
+          '<a id="loyaltyModalSend" class="btn-secondary" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Buka WhatsApp</a>' +
+          '<button type="button" id="loyaltyModalBot" class="btn-primary"><i class="fas fa-robot"></i> Kirim lewat Bot</button>' +
         '</div>' +
       '</div>';
 
@@ -208,6 +283,13 @@
     });
     send.addEventListener("click", function() {
       setTimeout(function() { modal.classList.add("hidden"); }, 300);
+    });
+
+    $id("loyaltyModalBot").addEventListener("click", function() {
+      queueMessage(send.dataset.phone, text.value, "manual").then(function() {
+        modal.classList.add("hidden");
+        toast("Pesan masuk antrian bot WA, terkirim dalam beberapa detik.");
+      }).catch(function(e) { alert("Gagal antri ke bot: " + e.message); });
     });
 
     return modal;
@@ -240,6 +322,7 @@
     const send = $id("loyaltyModalSend");
     send.dataset.phone = st.phone;
     send.href = waLink(st.phone, text);
+    $id("loyaltyModalBot").style.display = botOnline() ? "" : "none";
     modal.classList.remove("hidden");
   }
 
@@ -267,7 +350,12 @@
       createdAt: Date.now(),
       createdBy: (typeof currentUser !== "undefined" && currentUser) ? currentUser.role : "Admin"
     }).then(function() {
-      alert("Bonus " + BONUS_JAM + " jam untuk " + nama + " berhasil diklaim.\n\nCatat sewa gratisnya seperti biasa (nominal sesuai yang dibayar).");
+      let pesan = "Bonus " + BONUS_JAM + " jam untuk " + nama + " berhasil diklaim.\n\nCatat sewa gratisnya seperti biasa (nominal sesuai yang dibayar).";
+      if (botOnline()) {
+        queueMessage(phone, claimMessage(st), "klaim");
+        pesan += "\n\nKonfirmasi klaim dikirim otomatis ke WA pelanggan.";
+      }
+      alert(pesan);
     }).catch(function(error) {
       alert("Gagal klaim bonus: " + error.message);
     });
@@ -381,6 +469,7 @@
 
   window.onRentalsUpdated = function() {
     startClaims();
+    startBotWatch();
     renderList();
     renderHint();
   };
@@ -391,9 +480,19 @@
 
     const saved = rentalsList().find(function(r) { return r.id === rentalId; });
     const st = statusFor(phone);
-    openWaModal(st, saved ? countedHours(saved) : undefined);
+    const jam = saved ? countedHours(saved) : undefined;
+
+    if (botOnline()) {
+      queueMessage(phone, waMessage(st, jam), "sewa").then(function() {
+        toast("Info Bonus Jam dikirim otomatis ke WA pelanggan.");
+      }).catch(function() { openWaModal(st, jam); });
+      return;
+    }
+
+    openWaModal(st, jam);
   };
 
   // dipakai untuk tes
-  window.__loyalty = { normalizePhone: normalizePhone, countedHours: countedHours, statusFor: statusFor };
+  window.__loyalty = { normalizePhone: normalizePhone, countedHours: countedHours, statusFor: statusFor,
+    _setBot: function(v) { botStatus = v; renderBotPill(); }, _waMessage: waMessage };
 })();
