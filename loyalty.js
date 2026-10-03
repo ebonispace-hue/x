@@ -2,7 +2,7 @@
    PROGRAM BONUS JAM (LOYALTY)
    - Setiap total sewa 72 jam  -> bonus GRATIS 6 jam
    - Promo Mabar Puas 200rb    -> dihitung 48 jam
-   - Sewa di bawah 12 jam / sewa TV saja -> tidak dihitung
+   - Semua durasi sewa PS dihitung; sewa TV saja tidak dihitung
    - Tabungan bonus maksimal 2x (12 jam). Kalau sudah penuh,
      jam sewa berikutnya baru terhitung lagi setelah bonus diklaim.
    - Klaim dicatat di Firebase: loyaltyClaims/{id}
@@ -14,7 +14,6 @@
   const TARGET_JAM = 72;
   const BONUS_JAM = 6;
   const MAX_TABUNGAN = 2;          // 2 x 6 jam = 12 jam
-  const MIN_JAM = 12;
   const PROMO_NOMINAL = 200000;
   const PROMO_JAM = 48;
   const MULAI_PROGRAM = Date.parse("2026-10-01T00:00:00+07:00"); // sewa sebelum ini tidak dihitung
@@ -60,7 +59,7 @@
 
     const durasi = Number(rental.durasi || 0);
     const jam = rental.durasiUnit === "hari" ? durasi * 24 : durasi;
-    if (!jam || jam < MIN_JAM) return 0;
+    if (!jam || jam <= 0) return 0;
 
     const nominal = Number(rental.nominalKotor || rental.nominal || 0);
     if (nominal === PROMO_NOMINAL && jam >= PROMO_JAM) return PROMO_JAM;
@@ -148,7 +147,7 @@
     if (jamSewaIni !== undefined) {
       lines.push(jamSewaIni > 0
         ? "Sewa kali ini tercatat *" + jamSewaIni + " jam* di Program Bonus Jam."
-        : "Sewa kali ini di bawah 12 jam, jadi belum masuk hitungan Bonus Jam.");
+        : "Sewa kali ini belum masuk hitungan Bonus Jam.");
     }
 
     lines.push("📊 Jam terkumpul: *" + st.progress + "/" + TARGET_JAM + " jam*");
@@ -161,7 +160,7 @@
     }
 
     lines.push("");
-    lines.push("Program Bonus Jam: setiap total sewa 72 jam dapat GRATIS 6 jam (tabungan maks. 12 jam). Min. 12 jam per sewa, promo Mabar Puas 200rb dihitung 48 jam.");
+    lines.push("Program Bonus Jam: setiap total sewa 72 jam dapat GRATIS 6 jam (tabungan maks. 12 jam). Semua durasi sewa dihitung, promo Mabar Puas 200rb dihitung 48 jam.");
     lines.push("Bonus bisa dipakai di booking berikutnya 🙏");
 
     return lines.join("\n");
