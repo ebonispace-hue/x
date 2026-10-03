@@ -137,9 +137,8 @@
 
   /* ---------- pesan WA ---------- */
   function waMessage(st, jamSewaIni) {
-    const nama = st.name ? "Kak " + st.name : "Kak";
     const lines = [
-      "Halo " + nama + " 👋",
+      "Halo Kak 👋",
       "Terima kasih sudah sewa PS di *Eboni Space*! 🎮",
       ""
     ];
