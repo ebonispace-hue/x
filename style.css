@@ -2364,3 +2364,40 @@ img.foto-thumb { cursor: zoom-in; }
 .foto-viewer-msg { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
 
 .foto-viewer-close { position: absolute; top: calc(16px + var(--safe-top)); right: 16px; }
+
+/* =====================================================
+   v15 — SEMUA KARTU TRANSPARAN (±10–15%) + BAYANGAN TIPIS
+===================================================== */
+.total-card,
+.form-section,
+.history-card,
+.month-banner,
+.quick-btn {
+  background: rgba(16, 18, 44, 0.13);
+  border-color: rgba(214, 218, 255, 0.14);
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.45);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* sentuhan warna aksen tetap ada, tapi sangat tipis */
+.total-card {
+  background:
+    radial-gradient(120% 100% at 100% 0%, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 55%),
+    rgba(16, 18, 44, 0.12);
+}
+
+.total-card:hover {
+  border-color: rgba(214, 218, 255, 0.22);
+  box-shadow: 0 8px 22px -12px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.history-item,
+.detail-summary-item {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bottom-nav,
+.header {
+  background: rgba(6, 7, 20, 0.55);
+}
