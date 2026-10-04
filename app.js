@@ -508,6 +508,7 @@ function renderLatestHistory() {
         '<div class="nomor">' + escapeHtml(rental.nomorPenyewa) + '</div>' +
         '<div class="meta">PS ' + escapeHtml(rental.psUnit) + ' · ' +
           Number(rental.durasi || 0) + ' ' + escapeHtml(rental.durasiUnit || "jam") +
+          teksJamSewa(rental) +
           ' · ' + formatDate(rental.createdAt) + '</div>' +
         '<div class="meta" style="color:#facc15; margin-top:4px;">' +
         'Omset kotor · Kas: ' + formatRp(getRentalKas(rental)) +
@@ -1312,8 +1313,10 @@ if (rentalForm) {
     const durasiEl = $("durasi");
     const durasiUnitEl = $("durasiUnit");
     const nominalEl = $("nominal");
+    const jamMulaiEl = $("jamMulai");
 
     const nomor = nomorEl ? nomorEl.value.trim() : "";
+    const jamMulai = jamMulaiEl ? jamMulaiEl.value : "";
     const psUnit = psUnitEl ? psUnitEl.value : "";
     const durasi = durasiEl ? Number(durasiEl.value) : 0;
     const durasiUnit = durasiUnitEl ? durasiUnitEl.value : "jam";
@@ -1327,7 +1330,7 @@ const tvNominal = $("tvNominal") ? Number($("tvNominal").value) : 0;
 
 const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
 
-    if (!nomor || !psUnit || !durasi || !nominalKotor) {
+    if (!nomor || !psUnit || !jamMulai || !durasi || !nominalKotor) {
       alert("Lengkapi semua form sewa.");
       return;
     }
@@ -1386,6 +1389,9 @@ const file = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
   updates["rentals/" + rentalRef.key] = {
     nomorPenyewa: nomor,
     psUnit: psUnit,
+    jamMulai: jamMulai,
+    mulaiAt: hitungMulaiAt(jamMulai, waktu),
+    selesaiAt: hitungSelesaiAt(hitungMulaiAt(jamMulai, waktu), durasi, durasiUnit),
     durasi: durasi,
     durasiUnit: durasiUnit,
     nominalKotor: nominalKotor,
@@ -1496,6 +1502,7 @@ if (selectedTv) {
       db.ref().update(updates)
         .then(function() {
           rentalForm.reset();
+          setJamMulaiDefault();
           resetFotoInput();
           updateTvFields();
 
@@ -2051,6 +2058,7 @@ function renderMonthlyRentalList(rentals) {
           unit + ' · ' +
           Number(rental.durasi || 0) + ' ' +
           escapeHtml(rental.durasiUnit || "jam") +
+          teksJamSewa(rental) +
           '<br>' + formatDate(rental.createdAt) +
         '</span>' +
       '</div>' +
@@ -2155,6 +2163,76 @@ function formatDateExport(timestamp) {
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
     " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
 }
+
+/* =========================
+   JAM MULAI SEWA
+   Dropdown per 30 menit (00:00–23:30). Disimpan sebagai:
+   - jamMulai  : "HH:MM"
+   - mulaiAt   : timestamp jam mulai (tanggal mengikuti waktu input)
+   - selesaiAt : mulaiAt + durasi
+   Dipakai untuk menghitung utilisasi unit dan cek bentrok jadwal.
+========================= */
+function isiPilihanJamMulai(select, pakaiKosong) {
+  if (!select) return;
+  const pad = function(n) { return String(n).padStart(2, "0"); };
+  let html = pakaiKosong ? '<option value="">-- Tidak diisi --</option>' : '<option value="">-- Pilih Jam --</option>';
+  for (let i = 0; i < 48; i++) {
+    const jam = pad(Math.floor(i / 2)) + ":" + (i % 2 ? "30" : "00");
+    html += '<option value="' + jam + '">' + jam + '</option>';
+  }
+  select.innerHTML = html;
+}
+
+function jamMulaiTerdekat() {
+  const d = new Date();
+  const pad = function(n) { return String(n).padStart(2, "0"); };
+  let jam = d.getHours();
+  let menit = d.getMinutes() < 15 ? 0 : (d.getMinutes() < 45 ? 30 : 0);
+  if (d.getMinutes() >= 45) jam = (jam + 1) % 24;
+  return pad(jam) + ":" + pad(menit);
+}
+
+function setJamMulaiDefault() {
+  const el = $("jamMulai");
+  if (el) el.value = jamMulaiTerdekat();
+}
+
+/* Hitung timestamp mulai dari "HH:MM" dan waktu acuan (saat input).
+   Kalau jam yang dipilih lebih dari 6 jam setelah waktu acuan,
+   dianggap sewa dimulai kemarin (contoh: input jam 01:00 untuk sewa mulai 22:00). */
+function hitungMulaiAt(jamMulai, acuan) {
+  if (!jamMulai) return null;
+  const parts = String(jamMulai).split(":");
+  const d = new Date(Number(acuan) || Date.now());
+  d.setHours(Number(parts[0]) || 0, Number(parts[1]) || 0, 0, 0);
+  if (d.getTime() - Number(acuan || Date.now()) > 6 * 3600000) {
+    d.setDate(d.getDate() - 1);
+  }
+  return d.getTime();
+}
+
+function hitungSelesaiAt(mulaiAt, durasi, durasiUnit) {
+  if (!mulaiAt || !durasi) return null;
+  const satuan = durasiUnit === "hari" ? 86400000 : 3600000;
+  return mulaiAt + Number(durasi) * satuan;
+}
+
+function formatJamSelesai(rental) {
+  if (!rental || !rental.selesaiAt) return "";
+  const d = new Date(Number(rental.selesaiAt));
+  const pad = function(n) { return String(n).padStart(2, "0"); };
+  return pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function teksJamSewa(rental) {
+  if (!rental || !rental.jamMulai) return "";
+  const selesai = formatJamSelesai(rental);
+  return " · " + escapeHtml(rental.jamMulai) + (selesai ? "–" + escapeHtml(selesai) : "");
+}
+
+isiPilihanJamMulai($("jamMulai"), false);
+isiPilihanJamMulai($("editJamMulai"), true);
+setJamMulaiDefault();
 
 function autoWidth(rows) {
   const widths = [];
@@ -2428,13 +2506,15 @@ function downloadMonthlyReport(monthKey) {
     ["Didownload", formatDateExport(Date.now())]
   ];
 
-  const sewa = [["No", "Tanggal", "Nomor Penyewa", "Unit", "Durasi", "Satuan", "Omset Kotor", "Kas", "Pendapatan Bersih", "Input oleh"]]
+  const sewa = [["No", "Tanggal", "Nomor Penyewa", "Unit", "Jam Mulai", "Jam Selesai", "Durasi", "Satuan", "Omset Kotor", "Kas", "Pendapatan Bersih", "Input oleh"]]
     .concat(rentals.map(function(r, i) {
       return [
         i + 1,
         formatDateExport(r.createdAt),
         r.nomorPenyewa || "",
         String(r.psUnit || "").replace("_", " "),
+        r.mulaiAt ? formatDateExport(r.mulaiAt) : "",
+        r.selesaiAt ? formatDateExport(r.selesaiAt) : "",
         Number(r.durasi || 0),
         r.durasiUnit || "jam",
         getRentalGross(r),
@@ -2534,6 +2614,7 @@ function openEditModal(id) {
     editPsUnit: rental.psUnit || "A",
     editDurasi: rental.durasi || 1,
     editDurasiUnit: rental.durasiUnit || "jam",
+    editJamMulai: rental.jamMulai || "",
     editNominal: getRentalGross(rental)
   };
 
@@ -2570,6 +2651,7 @@ if (editForm) {
     const durasi = $("editDurasi") ? Number($("editDurasi").value) : 0;
     const durasiUnit = $("editDurasiUnit") ? $("editDurasiUnit").value : "jam";
     const nominalKotor = $("editNominal") ? Number($("editNominal").value) : 0;
+    const editJamMulai = $("editJamMulai") ? $("editJamMulai").value : "";
 
     if (!rental || !nomor || !psUnit || !durasi || !nominalKotor) {
       alert("Lengkapi seluruh data transaksi.");
@@ -2595,6 +2677,10 @@ if (isUnit303040(psUnit)) {
       updates["rentals/" + id + "/psUnit"] = psUnit;
       updates["rentals/" + id + "/durasi"] = durasi;
       updates["rentals/" + id + "/durasiUnit"] = durasiUnit;
+      const editMulaiAt = hitungMulaiAt(editJamMulai, rental.createdAt);
+      updates["rentals/" + id + "/jamMulai"] = editJamMulai || null;
+      updates["rentals/" + id + "/mulaiAt"] = editMulaiAt;
+      updates["rentals/" + id + "/selesaiAt"] = hitungSelesaiAt(editMulaiAt, durasi, durasiUnit);
      updates["rentals/" + id + "/nominalKotor"] = nominalKotor;
 updates["rentals/" + id + "/kasPersen"] = kasPersen;
 updates["rentals/" + id + "/kasNominal"] = kasNominal;
