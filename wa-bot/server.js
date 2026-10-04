@@ -21,7 +21,8 @@ const {
   default: makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  Browsers
 } = require("@whiskeysockets/baileys");
 
 const { initializeApp } = require("firebase/app");
@@ -121,30 +122,42 @@ async function startWhatsApp() {
     version: version,
     auth: state,
     logger: logger,
-    browser: ["Eboni Space Bot", "Chrome", "1.0"],
+    // Kode pairing hanya diterima WhatsApp kalau nama browser-nya standar
+    browser: Browsers.ubuntu("Chrome"),
     markOnlineOnConnect: false,
     syncFullHistory: false
   });
 
   sock.ev.on("creds.update", saveCreds);
 
-  if (BOT_NUMBER && !state.creds.registered) {
-    setTimeout(async function() {
-      try {
-        const code = await sock.requestPairingCode(BOT_NUMBER);
-        pairingCode = code;
-        console.log("\n==============================");
-        console.log(" KODE PAIRING WHATSAPP: " + code);
-        console.log(" WhatsApp nomor bot > Perangkat tertaut > Tautkan perangkat");
-        console.log(" > Tautkan dengan nomor telepon saja > masukkan kode di atas");
-        console.log("==============================\n");
-      } catch (e) {
-        log("Gagal minta kode pairing:", e.message);
-      }
-    }, 4000);
+  let pairingRequested = false;
+  const thisSock = sock;
+
+  async function mintaKodePairing() {
+    pairingRequested = true;
+    try {
+      const code = await thisSock.requestPairingCode(BOT_NUMBER);
+      const rapi = code.length === 8 ? code.slice(0, 4) + "-" + code.slice(4) : code;
+      pairingCode = rapi;
+      const jam = new Date().toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta" });
+      console.log("\n==============================");
+      console.log(" KODE PAIRING (" + jam + "): " + rapi);
+      console.log(" Masukkan SEGERA (berlaku ±1 menit).");
+      console.log(" Kalau muncul kode baru, kode lama TIDAK berlaku.");
+      console.log(" WhatsApp nomor bot > Perangkat tertaut > Tautkan perangkat");
+      console.log(" > Tautkan dengan nomor telepon saja > masukkan kode di atas");
+      console.log("==============================\n");
+    } catch (e) {
+      log("Gagal minta kode pairing:", e.message);
+    }
   }
 
   sock.ev.on("connection.update", function(u) {
+    // minta kode pairing sekali per koneksi, setelah koneksi ke WhatsApp siap
+    if (u.qr && BOT_NUMBER && !state.creds.registered && !pairingRequested) {
+      mintaKodePairing();
+    }
+
     if (u.qr) {
       lastQr = u.qr;
       if (!BOT_NUMBER) log("QR baru tersedia di /qr?key=...");
