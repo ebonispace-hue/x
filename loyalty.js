@@ -145,21 +145,21 @@
 
     if (jamSewaIni !== undefined) {
       lines.push(jamSewaIni > 0
-        ? "Sewa kali ini tercatat *" + jamSewaIni + " jam* di Program Bonus Jam."
-        : "Sewa kali ini belum masuk hitungan Bonus Jam.");
+        ? "Sewa kali ini tercatat *" + jamSewaIni + " jam XP* di *Level Up Rewards* 🚀"
+        : "Sewa kali ini belum masuk hitungan Level Up Rewards.");
     }
 
-    lines.push("📊 Jam terkumpul: *" + st.progress + "/" + TARGET_JAM + " jam*");
+    lines.push("📊 XP terkumpul: *" + st.progress + "/" + TARGET_JAM + " jam*");
     lines.push("🎁 Bonus siap klaim: *" + (st.tabungan * BONUS_JAM) + " jam* (" + st.tabungan + "x gratis " + BONUS_JAM + " jam)");
 
     if (st.tabungan >= MAX_TABUNGAN) {
       lines.push("⚠️ Tabungan bonus sudah maksimal (12 jam). Klaim dulu ya, supaya jam sewa berikutnya terhitung lagi.");
     } else {
-      lines.push("⏳ Kurang *" + (TARGET_JAM - st.progress) + " jam* lagi untuk bonus berikutnya.");
+      lines.push("⏳ Kurang *" + (TARGET_JAM - st.progress) + " jam* lagi untuk Level Up berikutnya.");
     }
 
     lines.push("");
-    lines.push("Program Bonus Jam: setiap total sewa 72 jam dapat GRATIS 6 jam (tabungan maks. 12 jam). Semua durasi sewa dihitung, promo Mabar Puas 200rb dihitung 48 jam.");
+    lines.push("*Level Up Rewards*: setiap total sewa 72 jam = Level Up, dapat GRATIS 6 jam main (tabungan maks. 12 jam). Semua durasi sewa dihitung, Mabar Puas 200rb = 48 jam.");
     lines.push("Bonus bisa dipakai di booking berikutnya 🙏");
 
     return lines.join("\n");
@@ -187,7 +187,7 @@
     pill.className = "bot-pill " + (on ? "on" : "off");
     pill.innerHTML = '<i class="fas fa-robot"></i> Bot WA ' + (on ? "online" : "offline");
     pill.title = on
-      ? "Pesan Bonus Jam dikirim otomatis dari nomor " + (botStatus.number ? "0" + String(botStatus.number).slice(2) : "bot")
+      ? "Pesan Level Up Rewards dikirim otomatis dari nomor " + (botStatus.number ? "0" + String(botStatus.number).slice(2) : "bot")
       : "Bot belum aktif: pesan dikirim manual lewat tombol WhatsApp";
   }
 
@@ -230,10 +230,10 @@
     const sisa = Math.max(0, st.tabungan - 1) * BONUS_JAM;
     return [
       "Halo Kak 👋",
-      "Bonus *GRATIS " + BONUS_JAM + " jam* dari Program Bonus Jam *Eboni Space* sudah dipakai ya. Selamat main! 🎮",
+      "Bonus *GRATIS " + BONUS_JAM + " jam* dari *Level Up Rewards* Eboni Space sudah dipakai ya. Selamat main! 🎮",
       "",
       "🎁 Sisa bonus: *" + sisa + " jam*",
-      "📊 Jam terkumpul: *" + st.progress + "/" + TARGET_JAM + " jam*",
+      "📊 XP terkumpul: *" + st.progress + "/" + TARGET_JAM + " jam*",
       "",
       "Terima kasih sudah langganan 🙏"
     ].join("\n");
@@ -255,7 +255,7 @@
       '<div class="modal-overlay" data-close="1"></div>' +
       '<div class="modal-card">' +
         '<div class="modal-header">' +
-          '<h3><i class="fas fa-gift"></i> Kirim Info Bonus Jam</h3>' +
+          '<h3><i class="fas fa-gift"></i> Kirim Info Level Up Rewards</h3>' +
           '<button type="button" class="btn-icon" data-close="1"><i class="fas fa-times"></i></button>' +
         '</div>' +
         '<div class="loyalty-summary" id="loyaltyModalSummary"></div>' +
@@ -417,7 +417,7 @@
     hint.classList.remove("hidden");
 
     if (!st.sewaCount) {
-      hint.innerHTML = '<i class="fas fa-user-plus"></i> Pelanggan baru, belum ada riwayat Bonus Jam.';
+      hint.innerHTML = '<i class="fas fa-user-plus"></i> Pelanggan baru, belum ada riwayat Level Up Rewards.';
       return;
     }
 
@@ -484,7 +484,7 @@
 
     if (botOnline()) {
       queueMessage(phone, waMessage(st, jam), "sewa").then(function() {
-        toast("Info Bonus Jam dikirim otomatis ke WA pelanggan.");
+        toast("Info Level Up Rewards dikirim otomatis ke WA pelanggan.");
       }).catch(function() { openWaModal(st, jam); });
       return;
     }
