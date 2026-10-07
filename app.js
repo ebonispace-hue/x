@@ -358,6 +358,7 @@ function startDatabaseListeners() {
     });
 
     allRentals = rentals;
+    updateDailySummaries();
     updateDashboard();
     if (window.onRentalsUpdated) window.onRentalsUpdated();
     refreshExpenseSummary();
@@ -3016,3 +3017,75 @@ initFirebase();
 checkSession();
 
 if (pinInput) pinInput.focus();
+
+
+/* =========================
+   RINGKASAN HARIAN UNTUK KANTOR VIRTUAL AI
+   Disimpan di summaries/{YYYY-MM-DD}. Isinya hanya angka gabungan:
+   TANPA nomor penyewa, nama, atau foto. Dibaca oleh laporan harian
+   dan dashboard kantor virtual. Ditulis hanya jika angkanya berubah.
+========================= */
+const SUMMARY_UNITS = ["A", "B", "C", "D", "E", "F", "G"];
+const lastSummaryJson = {};
+
+function tanggalLokal(ts) {
+  const d = new Date(Number(ts));
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = function(n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+function jamSewa(rental) {
+  const durasi = Number(rental.durasi || 0);
+  return rental.durasiUnit === "hari" ? durasi * 24 : durasi;
+}
+
+function hitungRingkasanHarian(tanggal) {
+  const unit = {};
+  SUMMARY_UNITS.forEach(function(u) { unit[u] = { sewa: 0, jam: 0, omzet: 0 }; });
+
+  const sebelumnya = new Set();
+  const hariIni = [];
+  allRentals.forEach(function(r) {
+    if (!r || !SUMMARY_UNITS.includes(String(r.psUnit))) return;
+    const tgl = tanggalLokal(r.createdAt);
+    if (!tgl) return;
+    if (tgl < tanggal) { if (r.nomorPenyewa) sebelumnya.add(String(r.nomorPenyewa).trim()); }
+    else if (tgl === tanggal) hariIni.push(r);
+  });
+
+  const ringkasan = { date: tanggal, sewa: 0, omzet: 0, kas: 0, bersih: 0, jamTersewa: 0, utilisasi: 0, repeat: 0, unit: unit };
+  const repeatNomor = new Set();
+  hariIni.forEach(function(r) {
+    const jam = jamSewa(r);
+    ringkasan.sewa += 1;
+    ringkasan.omzet += getRentalGross(r);
+    ringkasan.kas += getRentalKas(r);
+    ringkasan.bersih += getPendapatanBersih(r);
+    ringkasan.jamTersewa += jam;
+    const u = unit[String(r.psUnit)];
+    u.sewa += 1; u.jam += jam; u.omzet += getRentalGross(r);
+    const nomor = String(r.nomorPenyewa || "").trim();
+    if (nomor && sebelumnya.has(nomor)) repeatNomor.add(nomor);
+  });
+  ringkasan.repeat = repeatNomor.size;
+  ringkasan.utilisasi = Math.round((ringkasan.jamTersewa / (SUMMARY_UNITS.length * 24)) * 1000) / 1000;
+  return ringkasan;
+}
+
+function updateDailySummaries() {
+  if (!db || !currentUser) return;
+  const kemarin = tanggalLokal(Date.now() - 86400000);
+  const hariIni = tanggalLokal(Date.now());
+  [kemarin, hariIni].forEach(function(tgl) {
+    const data = hitungRingkasanHarian(tgl);
+    const json = JSON.stringify(data);
+    if (lastSummaryJson[tgl] === json) return;
+    lastSummaryJson[tgl] = json;
+    data.updatedAt = Date.now();
+    db.ref("summaries/" + tgl).set(data).catch(function(error) {
+      lastSummaryJson[tgl] = "";
+      console.warn("Ringkasan harian gagal disimpan:", error && error.message);
+    });
+  });
+}
