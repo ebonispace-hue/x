@@ -753,10 +753,10 @@
       </section>
       </div>
 
-      <!-- ================= FOLLOW-UP WA ================= -->
+      <!-- ================= INFO PROMO WA ================= -->
       <div class="page" data-page="promo" hidden>
       <div class="page-head">
-        <h2><i class="fab fa-whatsapp"></i> Follow-up Pelanggan</h2>
+        <h2><i class="fab fa-whatsapp"></i> Info Promo</h2>
         <p>Kirim pesan promo + gambar ke semua yang pernah sewa, lewat bot WA. Pelanggan yang balas STOP otomatis tidak dikirimi lagi.</p>
       </div>
 
@@ -770,7 +770,7 @@
           <div class="form-group fu-field">
             <label for="fuText">Pesan</label>
             <textarea id="fuText" rows="9" placeholder="Halo Kak ..."></textarea>
-            <small class="fu-hint">Format WA: *tebal*, _miring_, ~coret~. Jangan tulis nama pelanggan, cukup "Halo Kak".</small>
+            <small class="fu-hint">Format WA: *tebal*, _miring_, ~coret~. Jangan tulis nama pelanggan, cukup "Halo Kak". Catatan "nomor ini khusus pesan otomatis, chat ke WA utama 0878-1654-6467" otomatis ditambahkan di akhir pesan.</small>
           </div>
 
           <label class="fu-check"><input type="checkbox" id="fuStopFooter" checked> Tambahkan "Balas STOP kalau tidak mau menerima info promo lagi" (disarankan, mengurangi risiko nomor bot diblokir)</label>
@@ -828,7 +828,7 @@
               <option value="60">Lebih dari 60 hari lalu</option>
             </select>
           </label>
-          <label class="fu-check"><input type="checkbox" id="fuSkipRecent" checked> Lewati yang sudah di-follow-up 7 hari terakhir</label>
+          <label class="fu-check"><input type="checkbox" id="fuSkipRecent" checked> Lewati yang sudah dapat info promo 7 hari terakhir</label>
         </div>
 
         <div class="fu-toolbar">
@@ -851,7 +851,7 @@
 
       <section class="history-card">
         <div class="card-title-row">
-          <h3><i class="fas fa-clock-rotate-left"></i> Riwayat Follow-up</h3>
+          <h3><i class="fas fa-clock-rotate-left"></i> Riwayat Info Promo</h3>
         </div>
         <div id="fuHistory" class="fu-history">
           <p class="empty">Memuat data...</p>
@@ -1218,9 +1218,9 @@
 
 <script src="app.js?v=72"></script>
 <script src="fx.js?v=1"></script>
-<script src="nav.js?v=2"></script>
-<script src="loyalty.js?v=7"></script>
-<script src="followup.js?v=4"></script>
+<script src="nav.js?v=3"></script>
+<script src="loyalty.js?v=8"></script>
+<script src="followup.js?v=5"></script>
 
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {

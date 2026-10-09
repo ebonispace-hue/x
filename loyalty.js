@@ -138,6 +138,9 @@
   }
 
   /* ---------- pesan WA ---------- */
+  // catatan tetap di setiap pesan: nomor bot hanya untuk pesan otomatis
+  const WA_NOTE = "📌 _Nomor ini khusus pesan otomatis dari Eboni Space. Untuk tanya & booking, chat WA utama kami ya Kak: 0878-1654-6467 (wa.me/6287816546467)_";
+
   function waMessage(st, jamSewaIni) {
     const lines = [
       "Halo Kak 👋",
@@ -163,6 +166,8 @@
     lines.push("");
     lines.push("*Level Up Rewards*: setiap total sewa 72 jam = Level Up, dapat GRATIS 6 jam main (tabungan maks. 12 jam). Semua durasi sewa dihitung, Mabar Puas 200rb = 48 jam.");
     lines.push("Bonus bisa dipakai di booking berikutnya 🙏");
+    lines.push("");
+    lines.push(WA_NOTE);
 
     return lines.join("\n");
   }
@@ -238,7 +243,9 @@
       "🎁 Sisa bonus: *" + sisa + " jam*",
       "📊 XP terkumpul: *" + st.progress + "/" + TARGET_JAM + " jam*",
       "",
-      "Terima kasih sudah langganan 🙏"
+      "Terima kasih sudah langganan 🙏",
+      "",
+      WA_NOTE
     ].join("\n");
   }
 

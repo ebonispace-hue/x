@@ -1,5 +1,5 @@
 /* =====================================================
-   FOLLOW-UP WA KE SEMUA PELANGGAN
+   INFO PROMO WA KE SEMUA PELANGGAN
    - Daftar pelanggan diambil dari semua data sewa (sejak awal)
    - Pesan & gambar diatur sendiri dari panel
    - Pesan masuk antrian Firebase: waOutbox/{id} (source: "followup")
@@ -15,14 +15,16 @@
   "use strict";
 
   const DRAFT_KEY = "eboni-followup-draft";
-  const STOP_FOOTER = "\n\n_Balas STOP kalau tidak mau menerima info promo lagi._";
+  // catatan tetap di setiap pesan: nomor bot hanya untuk pesan otomatis
+  const WA_NOTE = "\n\n📌 _Nomor ini khusus pesan otomatis dari Eboni Space. Untuk tanya & booking, chat WA utama kami ya Kak: 0878-1654-6467 (wa.me/6287816546467)_";
+  const STOP_FOOTER = "\n_Balas STOP kalau tidak mau menerima info promo lagi._";
   const DEFAULT_TEXT = [
     "Halo Kak 👋",
     "Lama nggak main PS bareng *Eboni Space* nih 🎮",
     "",
     "Weekend ini mau sewa PS4 lagi? Antar-jemput gratis sampai rumah, tinggal colok dan main.",
     "",
-    "Balas chat ini aja ya Kak buat booking 🙏"
+    "Yuk booking sekarang 🙏"
   ].join("\n");
   const DAY = 24 * 3600 * 1000;
   const IMG_MAX_SIDE = 1280;
@@ -262,7 +264,9 @@
   /* ---------- pesan ---------- */
   function finalText() {
     let text = String(($id("fuText") || {}).value || "").trim();
-    if (($id("fuStopFooter") || {}).checked && text) text += STOP_FOOTER;
+    if (!text) return "";
+    text += WA_NOTE;
+    if (($id("fuStopFooter") || {}).checked) text += STOP_FOOTER;
     return text;
   }
 
@@ -289,6 +293,8 @@
   function loadDraft() {
     let v = "";
     try { v = localStorage.getItem(DRAFT_KEY) || ""; } catch (e) {}
+    // draf lama mengajak membalas ke nomor bot; arahkan ke WA utama lewat catatan
+    v = v.replace("Balas chat ini aja ya Kak buat booking 🙏", "Yuk booking sekarang 🙏");
     return v || DEFAULT_TEXT;
   }
 
@@ -383,7 +389,7 @@
         if (c.manual && !c.count) badges.push('<span class="fu-badge manual">manual</span>' +
           '<button type="button" class="fu-del" data-fu-del="' + c.phone + '" title="Hapus nomor"><i class="fas fa-xmark"></i></button>');
         if (c.optOut) badges.push('<span class="fu-badge stop">STOP</span>');
-        else if (c.lastFollowup) badges.push('<span class="fu-badge">di-follow-up ' + daysAgo(c.lastFollowup) + "</span>");
+        else if (c.lastFollowup) badges.push('<span class="fu-badge">dapat promo ' + daysAgo(c.lastFollowup) + "</span>");
         return '<label class="fu-row' + (ok ? "" : " off") + '">' +
           '<input type="checkbox" data-fu-phone="' + c.phone + '"' + (selected[c.phone] && ok ? " checked" : "") + (ok ? "" : " disabled") + ">" +
           '<span class="fu-row-main">' +
@@ -421,7 +427,7 @@
     const cap = dailyCap();
     const menit = Math.max(1, Math.round(count * 50 / 60));
     note.textContent = count > cap
-      ? "Maks. " + cap + " pesan follow-up per hari supaya nomor bot aman. Semua terkirim bertahap ±" + Math.ceil(count / cap) + " hari."
+      ? "Maks. " + cap + " pesan promo per hari supaya nomor bot aman. Semua terkirim bertahap ±" + Math.ceil(count / cap) + " hari."
       : "Dikirim satu per satu dengan jeda acak, perkiraan selesai ±" + menit + " menit.";
   }
 
@@ -446,7 +452,7 @@
     });
 
     if (!broadcasts.length) {
-      el.innerHTML = '<p class="empty">Belum ada follow-up yang dikirim.</p>';
+      el.innerHTML = '<p class="empty">Belum ada info promo yang dikirim.</p>';
       return;
     }
 
@@ -491,7 +497,7 @@
     if (!botOnline()) { alert("Bot WA sedang offline."); return; }
 
     const cap = dailyCap();
-    let msg = "Kirim follow-up ke " + phones.length + " pelanggan" + (imageData ? " (dengan gambar)" : "") + "?";
+    let msg = "Kirim info promo ke " + phones.length + " pelanggan" + (imageData ? " (dengan gambar)" : "") + "?";
     if (phones.length > cap) msg += "\n\nKarena batas " + cap + " pesan/hari, pengiriman berlangsung bertahap ±" + Math.ceil(phones.length / cap) + " hari.";
     msg += "\n\nPesan dikirim dari nomor bot satu per satu.";
     if (!confirm(msg)) return;
@@ -527,11 +533,11 @@
     });
 
     db.ref().update(updates).then(function() {
-      toast("Follow-up masuk antrian bot: " + phones.length + " pelanggan.");
+      toast("Info promo masuk antrian bot: " + phones.length + " pelanggan.");
       const hist = $id("fuHistory");
       if (hist && hist.scrollIntoView) hist.scrollIntoView({ behavior: "smooth", block: "start" });
     }).catch(function(e) {
-      alert("Gagal antri follow-up: " + e.message);
+      alert("Gagal antri info promo: " + e.message);
     }).then(function() {
       sending = false;
       renderSendButton();

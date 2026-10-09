@@ -15,7 +15,7 @@
     loan: "Loan",
     pengeluaran: "Pengeluaran",
     rekap: "Rekap Bulanan",
-    promo: "Follow-up WA"
+    promo: "Info Promo"
   };
 
   function currentPage() {
