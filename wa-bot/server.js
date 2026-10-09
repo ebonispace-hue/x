@@ -8,6 +8,9 @@
      (waBroadcastMedia/{broadcastId}), dikirim lebih pelan, dibatasi per hari;
      sisanya otomatis dilanjut hari berikutnya
    - Pelanggan yang membalas STOP dicatat di waOptOut/{nomor}, tidak dikirimi follow-up lagi
+   - Bot TIDAK PERNAH mengirim pesan sendiri: hanya pesan di antrian yang
+     bertanda klik:true (dibuat saat pemilik menekan tombol kirim di panel).
+     Balasan STOP/MULAI hanya dicatat, tidak dibalas otomatis.
    Tidak ada endpoint kirim pesan yang terbuka ke publik.
 
    Pengaturan lewat environment variable (hPanel > Node.js > Environment):
@@ -278,6 +281,7 @@ async function kirimSatu(item) {
   const phone = normalizePhone(item.phone);
   const text = String(item.text || "").slice(0, item.hasImage ? 1024 : 2000);
 
+  if (item.klik !== true) return gagal("ditolak: bukan dari tombol kirim di panel");
   if (!phone || !text) return gagal("nomor/pesan kosong");
   const umurMaks = followup ? UMUR_MAKS_FOLLOWUP_MS : UMUR_MAKS_PESAN_MS;
   if (Date.now() - Number(item.createdAt || 0) > umurMaks) return gagal("pesan kedaluwarsa");
@@ -404,12 +408,11 @@ async function tanganiPesanMasuk(ev) {
       }
 
       if (stop) {
+        // hanya dicatat, tidak dibalas otomatis
         await set(ref(db, "waOptOut/" + phone), { at: Date.now(), text: text });
-        await sock.sendMessage(jid, { text: "Siap Kak, nomor ini tidak akan dikirimi info promo lagi 🙏\nKalau berubah pikiran, balas *MULAI* ya." });
         log("Opt-out STOP dari", phone);
       } else if (optOut[phone]) {
         await set(ref(db, "waOptOut/" + phone), null);
-        await sock.sendMessage(jid, { text: "Siap Kak, info promo Eboni Space aktif lagi 🎮" });
         log("Opt-in MULAI dari", phone);
       }
     } catch (e) {

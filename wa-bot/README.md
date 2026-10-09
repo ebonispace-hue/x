@@ -19,7 +19,8 @@ Panel (GitHub Pages)  ──tulis──▶  Firebase: waOutbox/{id}  ◀──ba
 - Tulis pesan sendiri, tambah gambar (opsional), pilih penerima dari semua yang pernah sewa, lalu **Kirim**.
 - Follow-up dikirim lebih pelan (jeda acak 30–75 detik) dan maksimal **50 pesan per hari**.
   Sisanya otomatis dilanjut hari berikutnya. Ubah batasnya dengan environment `FOLLOWUP_PER_HARI`.
-- Pelanggan yang membalas **STOP** dicatat di `waOptOut` dan tidak dikirimi follow-up lagi. Balas **MULAI** untuk aktif lagi.
+- Pelanggan yang membalas **STOP** dicatat di `waOptOut` dan tidak dikirimi follow-up lagi. Balas **MULAI** untuk aktif lagi (dicatat saja, bot tidak membalas otomatis).
+- **Tidak ada pesan otomatis**: setiap pesan (info Level Up, konfirmasi klaim, follow-up) baru terkirim setelah tombol kirim di panel diklik. Bot menolak pesan antrian tanpa tanda `klik: true`.
 - Sisa pesan yang belum terkirim bisa dibatalkan dari **Riwayat Follow-up**.
 
 ## Perlindungan anti-spam yang sudah ada

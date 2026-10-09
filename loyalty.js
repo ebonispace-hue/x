@@ -6,7 +6,9 @@
    - Tabungan bonus maksimal 2x (12 jam). Kalau sudah penuh,
      jam sewa berikutnya baru terhitung lagi setelah bonus diklaim.
    - Klaim dicatat di Firebase: loyaltyClaims/{id}
-   - Info ke pelanggan dikirim lewat tombol WA (tanpa bot).
+   - Info ke pelanggan TIDAK pernah terkirim otomatis: panel selalu membuka
+     jendela pesan, dan baru terkirim setelah tombol "Kirim lewat Bot" /
+     "Buka WhatsApp" diklik.
 ===================================================== */
 (function() {
   "use strict";
@@ -222,6 +224,7 @@
       source: source || "manual",
       status: "pending",
       createdAt: Date.now(),
+      klik: true,   // tanda pesan dikirim karena tombol diklik (bot menolak yang tanpa tanda ini)
       createdBy: (typeof currentUser !== "undefined" && currentUser) ? currentUser.role : "Admin"
     });
   }
@@ -309,14 +312,14 @@
       '</div>';
   }
 
-  function openWaModal(st, jamSewaIni) {
+  function openWaModal(st, jamSewaIni, customText) {
     if (!st.phone) {
       alert("Nomor WA pelanggan tidak terbaca. Pastikan nomor diisi dengan benar (contoh 0812xxxx).");
       return;
     }
 
     const modal = ensureModal();
-    const text = waMessage(st, jamSewaIni);
+    const text = customText || waMessage(st, jamSewaIni);
     $id("loyaltyModalSummary").innerHTML = summaryHtml(st);
     $id("loyaltyModalText").value = text;
     const send = $id("loyaltyModalSend");
@@ -350,12 +353,9 @@
       createdAt: Date.now(),
       createdBy: (typeof currentUser !== "undefined" && currentUser) ? currentUser.role : "Admin"
     }).then(function() {
-      let pesan = "Bonus " + BONUS_JAM + " jam untuk " + nama + " berhasil diklaim.\n\nCatat sewa gratisnya seperti biasa (nominal sesuai yang dibayar).";
-      if (botOnline()) {
-        queueMessage(phone, claimMessage(st), "klaim");
-        pesan += "\n\nKonfirmasi klaim dikirim otomatis ke WA pelanggan.";
-      }
-      alert(pesan);
+      alert("Bonus " + BONUS_JAM + " jam untuk " + nama + " berhasil diklaim.\n\nCatat sewa gratisnya seperti biasa (nominal sesuai yang dibayar).");
+      // pesan konfirmasi hanya disiapkan; terkirim kalau tombol kirim diklik
+      openWaModal(st, undefined, claimMessage(st));
     }).catch(function(error) {
       alert("Gagal klaim bonus: " + error.message);
     });
@@ -482,13 +482,7 @@
     const st = statusFor(phone);
     const jam = saved ? countedHours(saved) : undefined;
 
-    if (botOnline()) {
-      queueMessage(phone, waMessage(st, jam), "sewa").then(function() {
-        toast("Info Level Up Rewards dikirim otomatis ke WA pelanggan.");
-      }).catch(function() { openWaModal(st, jam); });
-      return;
-    }
-
+    // tidak pernah kirim otomatis: tampilkan pesan, kirim setelah tombol diklik
     openWaModal(st, jam);
   };
 

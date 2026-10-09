@@ -417,6 +417,7 @@
         broadcastId: bid,
         hasImage: !!imageData,
         status: "pending",
+        klik: true,
         createdAt: now + i,
         createdBy: role()
       };
