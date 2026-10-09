@@ -34,6 +34,7 @@
     "🕹️ *Mabar Puas 200rb*: langsung dihitung 48 jam, tinggal sedikit lagi dapat jam gratis"
   ];
   const DAY = 24 * 3600 * 1000;
+  const JEDA_PROMO_HARI = 3;   // pelanggan yang sama boleh dapat info promo lagi setelah 3 hari
   const IMG_MAX_SIDE = 1280;
   const IMG_MAX_BYTES = 450 * 1024;
 
@@ -236,7 +237,7 @@
     if (c.optOut) return false;
     if (c.manual && !c.count) return true;   // nomor manual (untuk tes): bisa dikirimi kapan saja
     if (f.minDays && c.lastAt && Date.now() - c.lastAt < f.minDays * DAY) return false;
-    if (f.skipRecent && c.lastFollowup && Date.now() - c.lastFollowup < 7 * DAY) return false;
+    if (f.skipRecent && c.lastFollowup && Date.now() - c.lastFollowup < JEDA_PROMO_HARI * DAY) return false;
     return true;
   }
 
