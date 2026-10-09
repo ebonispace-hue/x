@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://ggyu-66f09-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=17">
+  <link rel="stylesheet" href="style.css?v=18">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -83,6 +83,7 @@
         <a href="#loan" class="nav-link" data-nav="loan"><i class="fas fa-hand-holding-dollar"></i><span>Loan</span></a>
         <a href="#pengeluaran" class="nav-link" data-nav="pengeluaran"><i class="fas fa-money-bill-transfer"></i><span>Keluar</span></a>
         <a href="#rekap" class="nav-link" data-nav="rekap"><i class="fas fa-calendar-days"></i><span>Rekap</span></a>
+        <a href="#promo" class="nav-link" data-nav="promo"><i class="fab fa-whatsapp"></i><span>Promo</span></a>
       </nav>
 
       <div class="header-right">
@@ -752,6 +753,96 @@
       </section>
       </div>
 
+      <!-- ================= FOLLOW-UP WA ================= -->
+      <div class="page" data-page="promo" hidden>
+      <div class="page-head">
+        <h2><i class="fab fa-whatsapp"></i> Follow-up Pelanggan</h2>
+        <p>Kirim pesan promo + gambar ke semua yang pernah sewa, lewat bot WA. Pelanggan yang balas STOP otomatis tidak dikirimi lagi.</p>
+      </div>
+
+      <section class="fu-grid">
+        <div class="history-card">
+          <div class="card-title-row">
+            <h3><i class="fas fa-pen"></i> Isi Pesan</h3>
+            <span id="fuBotStatus" class="bot-pill off"><i class="fas fa-robot"></i> Bot WA offline</span>
+          </div>
+
+          <div class="form-group fu-field">
+            <label for="fuText">Pesan</label>
+            <textarea id="fuText" rows="9" placeholder="Halo Kak ..."></textarea>
+            <small class="fu-hint">Format WA: *tebal*, _miring_, ~coret~. Jangan tulis nama pelanggan, cukup "Halo Kak".</small>
+          </div>
+
+          <label class="fu-check"><input type="checkbox" id="fuStopFooter" checked> Tambahkan "Balas STOP kalau tidak mau menerima info promo lagi" (disarankan, mengurangi risiko nomor bot diblokir)</label>
+
+          <div class="form-group fu-field">
+            <label>Gambar (opsional)</label>
+            <div id="fuImageBox" class="fu-image-box"></div>
+            <label class="btn-secondary fu-upload"><i class="fas fa-upload"></i> Pilih gambar<input type="file" id="fuImage" accept="image/*" hidden></label>
+          </div>
+
+          <div class="fu-actions">
+            <button type="button" id="fuReset" class="btn-mini"><i class="fas fa-rotate-left"></i> Contoh pesan</button>
+          </div>
+        </div>
+
+        <div class="history-card">
+          <div class="card-title-row">
+            <h3><i class="fas fa-eye"></i> Pratinjau</h3>
+          </div>
+          <div class="fu-phone">
+            <div id="fuPreview" class="fu-bubble"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="history-card">
+        <div class="card-title-row">
+          <h3><i class="fas fa-users"></i> Penerima</h3>
+          <input type="search" id="fuSearch" class="loyalty-search" placeholder="Cari nama / nomor">
+        </div>
+
+        <div class="fu-filters">
+          <label>Terakhir sewa
+            <select id="fuFilterDays">
+              <option value="0">Kapan saja</option>
+              <option value="7">Lebih dari 7 hari lalu</option>
+              <option value="14">Lebih dari 14 hari lalu</option>
+              <option value="30">Lebih dari 30 hari lalu</option>
+              <option value="60">Lebih dari 60 hari lalu</option>
+            </select>
+          </label>
+          <label class="fu-check"><input type="checkbox" id="fuSkipRecent" checked> Lewati yang sudah di-follow-up 7 hari terakhir</label>
+        </div>
+
+        <div class="fu-toolbar">
+          <span id="fuCount" class="card-subtext"></span>
+          <div class="card-title-actions">
+            <button type="button" id="fuSelectAll" class="btn-mini"><i class="fas fa-check-double"></i> Pilih semua</button>
+            <button type="button" id="fuSelectNone" class="btn-mini"><i class="fas fa-xmark"></i> Kosongkan</button>
+          </div>
+        </div>
+
+        <div id="fuList" class="fu-list">
+          <p class="empty">Memuat data...</p>
+        </div>
+
+        <div class="fu-send">
+          <button type="button" id="fuSend" class="btn-primary" disabled><i class="fas fa-paper-plane"></i> Kirim</button>
+          <p id="fuSendNote" class="card-subtext"></p>
+        </div>
+      </section>
+
+      <section class="history-card">
+        <div class="card-title-row">
+          <h3><i class="fas fa-clock-rotate-left"></i> Riwayat Follow-up</h3>
+        </div>
+        <div id="fuHistory" class="fu-history">
+          <p class="empty">Memuat data...</p>
+        </div>
+      </section>
+      </div>
+
     </main>
 
       <nav class="bottom-nav" aria-label="Menu halaman">
@@ -761,6 +852,7 @@
         <a href="#loan" class="nav-link" data-nav="loan"><i class="fas fa-hand-holding-dollar"></i><span>Loan</span></a>
         <a href="#pengeluaran" class="nav-link" data-nav="pengeluaran"><i class="fas fa-money-bill-transfer"></i><span>Keluar</span></a>
         <a href="#rekap" class="nav-link" data-nav="rekap"><i class="fas fa-calendar-days"></i><span>Rekap</span></a>
+        <a href="#promo" class="nav-link" data-nav="promo"><i class="fab fa-whatsapp"></i><span>Promo</span></a>
       </nav>
   </div>
 
@@ -1110,8 +1202,9 @@
 
 <script src="app.js?v=72"></script>
 <script src="fx.js?v=1"></script>
-<script src="nav.js?v=1"></script>
+<script src="nav.js?v=2"></script>
 <script src="loyalty.js?v=6"></script>
+<script src="followup.js?v=1"></script>
 
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {

@@ -7,14 +7,15 @@
 (function() {
   "use strict";
 
-  const PAGES = ["dashboard", "sewa", "kas", "loan", "pengeluaran", "rekap"];
+  const PAGES = ["dashboard", "sewa", "kas", "loan", "pengeluaran", "rekap", "promo"];
   const TITLES = {
     dashboard: "Home",
     sewa: "Input Sewa",
     kas: "Kas",
     loan: "Loan",
     pengeluaran: "Pengeluaran",
-    rekap: "Rekap Bulanan"
+    rekap: "Rekap Bulanan",
+    promo: "Follow-up WA"
   };
 
   function currentPage() {

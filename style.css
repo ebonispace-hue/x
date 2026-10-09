@@ -2259,7 +2259,7 @@ input[type="number"]::-webkit-outer-spin-button {
     bottom: 0;
     left: 0;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     padding: 6px 4px calc(6px + var(--safe-bottom));
     border-top: 1px solid var(--line);
     background: rgba(6, 7, 20, 0.86);
@@ -2549,3 +2549,246 @@ img.foto-thumb { cursor: zoom-in; }
 }
 
 .loyalty-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* =====================================================
+   v18 — FOLLOW-UP WA
+===================================================== */
+.fu-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.fu-field { margin-top: 14px; }
+.fu-field textarea { text-transform: none; min-height: 190px; }
+.fu-hint { color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+
+.fu-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 12px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.fu-check input,
+.fu-row input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  padding: 0;
+  accent-color: var(--gold);
+}
+
+.fu-image-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.fu-image-box img {
+  max-width: 140px;
+  max-height: 140px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.fu-image-empty { color: var(--muted); font-size: 12.5px; }
+.fu-image-empty i { color: var(--gold); margin-right: 4px; }
+
+.fu-upload {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.fu-actions { display: flex; gap: 8px; margin-top: 14px; }
+
+/* pratinjau gaya WhatsApp */
+.fu-phone {
+  margin-top: 14px;
+  padding: 16px 14px;
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(circle at 20% 10%, rgba(94, 234, 212, 0.06), transparent 40%),
+    #0b141a;
+  min-height: 220px;
+}
+
+.fu-bubble {
+  position: relative;
+  max-width: 92%;
+  margin-left: auto;
+  padding: 5px 5px 8px;
+  border-radius: 10px 0 10px 10px;
+  color: #e9edef;
+  font-size: 13.5px;
+  line-height: 1.45;
+  text-transform: none;
+  background: #005c4b;
+  word-wrap: break-word;
+}
+
+.fu-bubble img {
+  display: block;
+  width: 100%;
+  border-radius: 7px;
+  margin-bottom: 4px;
+}
+
+.fu-bubble-text { padding: 3px 6px 0; }
+.fu-bubble-text.muted { color: rgba(233, 237, 239, 0.55); font-style: italic; }
+
+/* penerima */
+.fu-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 18px;
+  margin-top: 14px;
+}
+
+.fu-filters > label:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.fu-filters .fu-check { margin: 0 0 12px; }
+
+.fu-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.fu-toolbar strong { color: var(--gold); }
+
+.fu-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.fu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  text-transform: none;
+}
+
+.fu-row.off { opacity: 0.5; cursor: default; }
+
+.fu-row-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.fu-row-main strong {
+  overflow: hidden;
+  font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fu-row-main span { color: var(--muted); font-size: 11.5px; }
+
+.fu-badge {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fu-badge.stop { color: var(--rose); border-color: rgba(251, 113, 133, 0.45); }
+
+.fu-send {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.fu-send .card-subtext { margin: 0; flex: 1; min-width: 200px; }
+
+/* riwayat */
+.fu-history { display: grid; gap: 10px; margin-top: 14px; }
+
+.fu-hist {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  text-transform: none;
+}
+
+.fu-hist-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 13px;
+}
+
+.fu-hist-head i { color: var(--gold); }
+.fu-hist-head span { color: var(--muted); font-size: 12px; }
+
+.fu-hist-text {
+  margin: 6px 0 8px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.fu-hist-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fu-hist-stats .ok { color: var(--mint); }
+.fu-hist-stats .bad { color: var(--rose); }
+
+@media (max-width: 720px) {
+  .fu-grid { grid-template-columns: 1fr; }
+  .fu-list { grid-template-columns: 1fr; max-height: 380px; }
+  .fu-filters > label:first-child { min-width: 0; width: 100%; }
+  .fu-send .btn-primary { width: 100%; justify-content: center; }
+}

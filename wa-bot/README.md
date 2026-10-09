@@ -14,6 +14,14 @@ Panel (GitHub Pages)  ──tulis──▶  Firebase: waOutbox/{id}  ◀──ba
 > ⚠️ Ini bot **tidak resmi** (memakai WhatsApp Web). Nomornya bisa diblokir WhatsApp.
 > **Selalu pakai nomor khusus bot, jangan nomor booking utama.**
 
+## Follow-up promo dari panel (menu **Promo**)
+
+- Tulis pesan sendiri, tambah gambar (opsional), pilih penerima dari semua yang pernah sewa, lalu **Kirim**.
+- Follow-up dikirim lebih pelan (jeda acak 30–75 detik) dan maksimal **50 pesan per hari**.
+  Sisanya otomatis dilanjut hari berikutnya. Ubah batasnya dengan environment `FOLLOWUP_PER_HARI`.
+- Pelanggan yang membalas **STOP** dicatat di `waOptOut` dan tidak dikirimi follow-up lagi. Balas **MULAI** untuk aktif lagi.
+- Sisa pesan yang belum terkirim bisa dibatalkan dari **Riwayat Follow-up**.
+
 ## Perlindungan anti-spam yang sudah ada
 
 - Hanya mengirim ke nomor yang pernah ada di data sewa.

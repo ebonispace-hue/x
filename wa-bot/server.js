@@ -4,6 +4,10 @@
    - Panel menulis pesan ke Firebase: waOutbox/{id} = {phone, text, status:"pending"}
    - Bot ini membaca antrian itu, mengirim lewat WhatsApp, lalu menandai "sent"/"failed"
    - Bot menulis status online ke waBot/status supaya panel tahu bot hidup
+   - Follow-up dari panel (source "followup"): bisa pakai gambar
+     (waBroadcastMedia/{broadcastId}), dikirim lebih pelan, dibatasi per hari;
+     sisanya otomatis dilanjut hari berikutnya
+   - Pelanggan yang membalas STOP dicatat di waOptOut/{nomor}, tidak dikirimi follow-up lagi
    Tidak ada endpoint kirim pesan yang terbuka ke publik.
 
    Pengaturan lewat environment variable (hPanel > Node.js > Environment):
@@ -28,7 +32,7 @@ const {
 const { initializeApp } = require("firebase/app");
 const {
   getDatabase, ref, onChildAdded, update, get, set, runTransaction,
-  query, orderByChild, startAt
+  query, orderByChild, startAt, onValue
 } = require("firebase/database");
 
 /* ---------- konfigurasi ---------- */
@@ -43,6 +47,12 @@ const MAX_PER_NOMOR_PER_HARI = 4;      // anti-spam
 const JEDA_MIN_MS = 4000;              // jeda antar pesan (acak 4–9 detik)
 const JEDA_MAX_MS = 9000;
 const UMUR_MAKS_PESAN_MS = 24 * 3600 * 1000;  // pesan lebih tua dari 24 jam tidak dikirim
+
+// Follow-up massal: lebih pelan & dibatasi per hari supaya nomor bot tidak diblokir
+const FOLLOWUP_PER_HARI = Math.max(1, Number(process.env.FOLLOWUP_PER_HARI || 50));
+const JEDA_FU_MIN_MS = 30000;          // jeda antar follow-up (acak 30–75 detik)
+const JEDA_FU_MAX_MS = 75000;
+const UMUR_MAKS_FOLLOWUP_MS = 7 * 24 * 3600 * 1000;  // follow-up boleh menunggu sampai 7 hari
 
 const firebaseConfig = {
   apiKey: "AIzaSyCWl_SOWyPuXUETZzXkGC8Cm_WhdqXTATg",
@@ -65,8 +75,12 @@ let pairingCode = "";
 let myNumber = "";
 let knownCustomers = new Set();
 const queue = [];
+let deferred = [];    // follow-up yang menunggu kuota hari berikutnya
 let processing = false;
 const sentLog = {};   // phone -> [timestamps]
+let optOut = {};      // phone -> {at}
+let kuotaPenuhTanggal = "";
+const mediaCache = new Map();
 
 function log() {
   const args = Array.prototype.slice.call(arguments);
@@ -106,7 +120,9 @@ async function heartbeat() {
       online: connected,
       number: myNumber || "",
       lastSeen: Date.now(),
-      needQr: !connected && !!lastQr
+      needQr: !connected && !!lastQr,
+      followupCap: FOLLOWUP_PER_HARI,
+      followupDeferred: deferred.length
     });
   } catch (e) {
     log("Heartbeat gagal:", e.message);
@@ -129,6 +145,7 @@ async function startWhatsApp() {
   });
 
   sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("messages.upsert", tanganiPesanMasuk);
 
   let pairingRequested = false;
   const thisSock = sock;
@@ -204,50 +221,105 @@ async function tandai(id, data) {
   try { await update(ref(db, "waOutbox/" + id), data); } catch (e) { log("Gagal update status", id, e.message); }
 }
 
+function hariIni() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+}
+
+/* ambil 1 jatah follow-up hari ini; false kalau kuota sudah habis */
+async function ambilKuotaFollowup() {
+  const tgl = hariIni();
+  if (kuotaPenuhTanggal === tgl) return false;
+  const r = await runTransaction(ref(db, "waBot/followupHarian/" + tgl), function(cur) {
+    const n = Number(cur || 0);
+    return n < FOLLOWUP_PER_HARI ? n + 1 : undefined;
+  });
+  if (!r.committed) {
+    kuotaPenuhTanggal = tgl;
+    log("Kuota follow-up hari ini (" + FOLLOWUP_PER_HARI + ") habis, sisanya dilanjut besok.");
+    return false;
+  }
+  return true;
+}
+
+/* gambar follow-up (disimpan sekali per broadcast) */
+async function ambilMedia(bid) {
+  if (mediaCache.has(bid)) return mediaCache.get(bid);
+  let out = null;
+  try {
+    const snap = await get(ref(db, "waBroadcastMedia/" + bid));
+    const v = snap.val() || {};
+    const m = /^data:(image\/[\w+.-]+);base64,(.+)$/.exec(String(v.image || ""));
+    if (m) out = { buffer: Buffer.from(m[2], "base64"), mimetype: m[1], thumb: String(v.thumb || "") };
+  } catch (e) {
+    log("Gagal ambil gambar", bid, e.message);
+    return null;   // jangan di-cache, coba lagi nanti
+  }
+  mediaCache.set(bid, out);
+  if (mediaCache.size > 5) mediaCache.delete(mediaCache.keys().next().value);
+  return out;
+}
+
+/* hasil: "sent" | "failed" | "skip" | "deferred" */
 async function kirimSatu(item) {
   const id = item.id;
+  const followup = item.source === "followup";
 
   // kunci pesan supaya tidak terkirim dua kali
   const lock = await runTransaction(ref(db, "waOutbox/" + id + "/status"), function(cur) {
     return cur === "pending" ? "sending" : undefined;
   });
-  if (!lock.committed) return;
+  if (!lock.committed) return "skip";
+
+  const gagal = async function(error) {
+    await tandai(id, { status: "failed", error: error, doneAt: Date.now() });
+    return "skip";
+  };
 
   const phone = normalizePhone(item.phone);
-  const text = String(item.text || "").slice(0, 2000);
+  const text = String(item.text || "").slice(0, item.hasImage ? 1024 : 2000);
 
-  if (!phone || !text) return tandai(id, { status: "failed", error: "nomor/pesan kosong", doneAt: Date.now() });
-  if (Date.now() - Number(item.createdAt || 0) > UMUR_MAKS_PESAN_MS) {
-    return tandai(id, { status: "failed", error: "pesan kedaluwarsa", doneAt: Date.now() });
-  }
+  if (!phone || !text) return gagal("nomor/pesan kosong");
+  const umurMaks = followup ? UMUR_MAKS_FOLLOWUP_MS : UMUR_MAKS_PESAN_MS;
+  if (Date.now() - Number(item.createdAt || 0) > umurMaks) return gagal("pesan kedaluwarsa");
 
   if (!knownCustomers.has(phone)) await refreshCustomers();
-  if (!knownCustomers.has(phone)) {
-    return tandai(id, { status: "failed", error: "nomor bukan pelanggan", doneAt: Date.now() });
+  if (!knownCustomers.has(phone)) return gagal("nomor bukan pelanggan");
+  if (followup && optOut[phone]) return gagal("pelanggan minta STOP");
+  if (!bolehKirim(phone)) return gagal("batas pesan harian nomor ini");
+
+  if (followup && !(await ambilKuotaFollowup())) {
+    await tandai(id, { status: "pending" });
+    deferred.push(item);
+    return "deferred";
   }
-  if (!bolehKirim(phone)) {
-    return tandai(id, { status: "failed", error: "batas pesan harian nomor ini", doneAt: Date.now() });
+
+  let content = { text: text };
+  if (item.hasImage && item.broadcastId) {
+    const media = await ambilMedia(item.broadcastId);
+    if (!media) return gagal("gambar follow-up tidak ditemukan");
+    content = { image: media.buffer, caption: text, mimetype: media.mimetype };
+    if (media.thumb) content.jpegThumbnail = media.thumb;
   }
 
   try {
     const cek = await sock.onWhatsApp(phone);
-    if (!cek || !cek[0] || !cek[0].exists) {
-      return tandai(id, { status: "failed", error: "nomor tidak terdaftar di WhatsApp", doneAt: Date.now() });
-    }
+    if (!cek || !cek[0] || !cek[0].exists) return gagal("nomor tidak terdaftar di WhatsApp");
 
     const jid = cek[0].jid;
     await sock.presenceSubscribe(jid).catch(function() {});
     await sock.sendPresenceUpdate("composing", jid).catch(function() {});
     await sleep(1500 + Math.random() * 2000);
-    await sock.sendMessage(jid, { text: text });
+    await sock.sendMessage(jid, content);
     await sock.sendPresenceUpdate("paused", jid).catch(function() {});
 
     (sentLog[phone] = sentLog[phone] || []).push(Date.now());
-    log("Terkirim ke", phone, "(" + id + ")");
+    log("Terkirim ke", phone, "(" + id + (followup ? ", follow-up" : "") + ")");
     await tandai(id, { status: "sent", doneAt: Date.now(), error: null });
+    return "sent";
   } catch (e) {
     log("Gagal kirim ke", phone, e.message);
     await tandai(id, { status: "failed", error: String(e.message || e).slice(0, 200), doneAt: Date.now() });
+    return "failed";
   }
 }
 
@@ -258,16 +330,30 @@ async function processQueue() {
   try {
     while (queue.length && connected) {
       const item = queue.shift();
-      await kirimSatu(item);
-      await sleep(JEDA_MIN_MS + Math.random() * (JEDA_MAX_MS - JEDA_MIN_MS));
+      const hasil = await kirimSatu(item);
+      if (hasil !== "sent" && hasil !== "failed") continue;   // tidak ada pesan keluar: langsung lanjut
+      const fu = item.source === "followup";
+      const min = fu ? JEDA_FU_MIN_MS : JEDA_MIN_MS;
+      const max = fu ? JEDA_FU_MAX_MS : JEDA_MAX_MS;
+      await sleep(min + Math.random() * (max - min));
     }
   } finally {
     processing = false;
   }
 }
 
+/* follow-up yang tertunda dicoba lagi setelah ganti hari */
+function cekTertunda() {
+  if (!deferred.length || kuotaPenuhTanggal === hariIni()) return;
+  const items = deferred;
+  deferred = [];
+  items.forEach(function(it) { queue.push(it); });
+  log("Lanjut kirim " + items.length + " follow-up yang tertunda.");
+  processQueue();
+}
+
 function watchOutbox() {
-  const since = Date.now() - UMUR_MAKS_PESAN_MS;
+  const since = Date.now() - UMUR_MAKS_FOLLOWUP_MS;
   const q = query(ref(db, "waOutbox"), orderByChild("createdAt"), startAt(since));
 
   onChildAdded(q, function(snap) {
@@ -277,6 +363,59 @@ function watchOutbox() {
     queue.push(item);
     processQueue();
   });
+}
+
+function watchOptOut() {
+  onValue(ref(db, "waOptOut"), function(snap) {
+    optOut = snap.val() || {};
+  });
+}
+
+/* ---------- pesan masuk: STOP / MULAI ---------- */
+function nomorDariKey(key) {
+  const calon = [key.remoteJid, key.senderPn, key.participantPn];
+  for (let i = 0; i < calon.length; i++) {
+    const j = String(calon[i] || "");
+    if (j.endsWith("@s.whatsapp.net")) return j.split("@")[0].split(":")[0];
+  }
+  return "";
+}
+
+async function tanganiPesanMasuk(ev) {
+  if (!ev || ev.type !== "notify") return;
+  for (const m of ev.messages || []) {
+    try {
+      if (!m.key || m.key.fromMe) continue;
+      const jid = String(m.key.remoteJid || "");
+      if (jid.endsWith("@g.us") || jid === "status@broadcast" || jid.endsWith("@newsletter")) continue;
+
+      const msg = m.message || {};
+      const text = String(msg.conversation || (msg.extendedTextMessage && msg.extendedTextMessage.text) || "")
+        .trim().toLowerCase().replace(/[.!]+$/, "");
+
+      const stop = /^(stop|berhenti|unsubscribe|unsub)$/.test(text);
+      const mulai = /^(mulai|start)$/.test(text);
+      if (!stop && !mulai) continue;
+
+      const phone = nomorDariKey(m.key);
+      if (!phone) {
+        log("Pesan " + text.toUpperCase() + " masuk, tapi nomor pengirim tidak terbaca (" + jid + ")");
+        continue;
+      }
+
+      if (stop) {
+        await set(ref(db, "waOptOut/" + phone), { at: Date.now(), text: text });
+        await sock.sendMessage(jid, { text: "Siap Kak, nomor ini tidak akan dikirimi info promo lagi 🙏\nKalau berubah pikiran, balas *MULAI* ya." });
+        log("Opt-out STOP dari", phone);
+      } else if (optOut[phone]) {
+        await set(ref(db, "waOptOut/" + phone), null);
+        await sock.sendMessage(jid, { text: "Siap Kak, info promo Eboni Space aktif lagi 🎮" });
+        log("Opt-in MULAI dari", phone);
+      }
+    } catch (e) {
+      log("Gagal proses pesan masuk:", e.message);
+    }
+  }
 }
 
 /* ---------- halaman web kecil: /health, /qr ---------- */
@@ -338,6 +477,8 @@ server.listen(PORT, function() {
 refreshCustomers();
 setInterval(refreshCustomers, 10 * 60 * 1000);
 setInterval(heartbeat, 60 * 1000);
+setInterval(cekTertunda, 15 * 60 * 1000);
+watchOptOut();
 watchOutbox();
 startWhatsApp().catch(function(e) {
   log("Gagal start WhatsApp:", e.message);
