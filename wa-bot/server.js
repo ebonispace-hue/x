@@ -29,7 +29,8 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  Browsers
+  Browsers,
+  proto
 } = require("@whiskeysockets/baileys");
 
 const { initializeApp } = require("firebase/app");
@@ -84,6 +85,34 @@ const sentLog = {};   // phone -> [timestamps]
 let optOut = {};      // phone -> {at}
 let kuotaPenuhTanggal = "";
 const mediaCache = new Map();
+
+/* Simpan pesan yang sudah terkirim. Kalau HP penerima gagal membuka pesan,
+   WhatsApp meminta kirim ulang (retry) — tanpa ini penerima melihat
+   "Menunggu pesan ini / Waiting for this message". */
+const SENT_STORE_FILE = path.join(__dirname, "sent-store.json");
+const SENT_STORE_MAX = 300;
+const sentStore = new Map();
+try {
+  const saved = JSON.parse(fs.readFileSync(SENT_STORE_FILE, "utf8"));
+  Object.keys(saved).forEach(function(id) { sentStore.set(id, saved[id]); });
+} catch (e) { /* belum ada */ }
+let simpanTimer = null;
+function simpanPesanTerkirim(msg) {
+  if (!msg || !msg.key || !msg.key.id || !msg.message) return;
+  // disimpan dalam bentuk protobuf (base64) supaya utuh saat dibaca ulang
+  try {
+    sentStore.set(msg.key.id, Buffer.from(proto.Message.encode(msg.message).finish()).toString("base64"));
+  } catch (e) { return; }
+  while (sentStore.size > SENT_STORE_MAX) sentStore.delete(sentStore.keys().next().value);
+  clearTimeout(simpanTimer);
+  simpanTimer = setTimeout(function() {
+    try {
+      const obj = {};
+      sentStore.forEach(function(v, k) { obj[k] = v; });
+      fs.writeFileSync(SENT_STORE_FILE, JSON.stringify(obj));
+    } catch (e) { log("Gagal simpan sent-store:", e.message); }
+  }, 2000);
+}
 
 function log() {
   const args = Array.prototype.slice.call(arguments);
@@ -158,7 +187,13 @@ async function startWhatsApp() {
     // Kode pairing hanya diterima WhatsApp kalau nama browser-nya standar
     browser: Browsers.ubuntu("Chrome"),
     markOnlineOnConnect: false,
-    syncFullHistory: false
+    syncFullHistory: false,
+    // dipakai WhatsApp untuk kirim ulang pesan yang gagal dibuka penerima
+    getMessage: async function(key) {
+      const b64 = sentStore.get(key.id);
+      if (!b64) return undefined;
+      try { return proto.Message.decode(Buffer.from(b64, "base64")); } catch (e) { return undefined; }
+    }
   });
 
   sock.ev.on("creds.update", saveCreds);
@@ -341,7 +376,8 @@ async function kirimSatu(item) {
     await sock.presenceSubscribe(jid).catch(function() {});
     await sock.sendPresenceUpdate("composing", jid).catch(function() {});
     await sleep(1500 + Math.random() * 2000);
-    await sock.sendMessage(jid, content);
+    const terkirim = await sock.sendMessage(jid, content);
+    simpanPesanTerkirim(terkirim);
     await sock.sendPresenceUpdate("paused", jid).catch(function() {});
 
     (sentLog[phone] = sentLog[phone] || []).push(Date.now());
