@@ -139,7 +139,7 @@
 
   /* ---------- pesan WA ---------- */
   // catatan tetap di setiap pesan: nomor bot hanya untuk pesan otomatis
-  const WA_NOTE = "📌 _Nomor ini khusus pesan otomatis dari Eboni Space. Untuk tanya & booking, chat WA utama kami ya Kak: 0878-1654-6467 (wa.me/6287816546467)_";
+  const WA_NOTE = "📌 _Nomor ini khusus pesan otomatis dari Eboni Space. Untuk tanya & booking, chat WA utama kami ya Kak: wa.me/6287816546467_";
 
   function waMessage(st, jamSewaIni) {
     const lines = [

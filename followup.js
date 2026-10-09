@@ -16,20 +16,23 @@
 
   const DRAFT_KEY = "eboni-followup-draft";
   // catatan tetap di setiap pesan: nomor bot hanya untuk pesan otomatis
-  const WA_NOTE = "\n\n📌 _Nomor ini khusus pesan otomatis dari Eboni Space. Untuk tanya & booking, chat WA utama kami ya Kak: 0878-1654-6467 (wa.me/6287816546467)_";
+  const WA_NOTE = "\n\n📌 _Nomor ini khusus pesan otomatis dari Eboni Space. Untuk tanya & booking, chat WA utama kami ya Kak: wa.me/6287816546467_";
   const STOP_FOOTER = "\n_Balas STOP kalau tidak mau menerima info promo lagi._";
   const DEFAULT_TEXT = [
     "Halo Kak 👋",
     "Ada promo seru dari *Eboni Space* nih 🎮🔥",
     "",
-    "🎁 *Level Up Rewards*: setiap total sewa 72 jam, dapat *GRATIS 6 jam* main. Semua durasi sewa dihitung!",
-    "🕹️ *Mabar Puas 200rb*: langsung dihitung 48 jam, tinggal sedikit lagi dapat jam gratis",
-    "🚚 Antar-jemput *GRATIS* sampai rumah (radius 7 km Cileungsi & Gunung Putri), tinggal colok dan main",
+    "🎁 *Main Terus, Gratis Terus!* Setiap total sewa 72 jam, Kakak dapat *GRATIS 6 jam* main. Semua durasi sewa dihitung, jadi makin sering sewa makin untung!",
+    "🕹️ *Mabar Puas 200rb*: puas main *2 hari 6 jam*",
+    "🚚 Antar-jemput *GRATIS* sampai depan rumah dari *3 pos Eboni Space* di Cileungsi, Gunung Putri & Cireundeu (radius 6 km), tinggal colok dan main",
     "",
     "Yuk booking sekarang 🙏"
   ].join("\n");
-  // contoh pesan lama: kalau draf masih sama persis, otomatis diganti contoh baru
-  const OLD_DEFAULT_BODY = "Lama nggak main PS bareng *Eboni Space* nih 🎮\n\nWeekend ini mau sewa PS4 lagi? Antar-jemput gratis sampai rumah, tinggal colok dan main.";
+  // contoh pesan lama: kalau draf masih berisi contoh lama, otomatis diganti contoh baru
+  const OLD_DEFAULTS = [
+    "Lama nggak main PS bareng *Eboni Space* nih 🎮\n\nWeekend ini mau sewa PS4 lagi? Antar-jemput gratis sampai rumah, tinggal colok dan main.",
+    "🕹️ *Mabar Puas 200rb*: langsung dihitung 48 jam, tinggal sedikit lagi dapat jam gratis"
+  ];
   const DAY = 24 * 3600 * 1000;
   const IMG_MAX_SIDE = 1280;
   const IMG_MAX_BYTES = 450 * 1024;
@@ -299,7 +302,7 @@
     try { v = localStorage.getItem(DRAFT_KEY) || ""; } catch (e) {}
     // draf lama mengajak membalas ke nomor bot; arahkan ke WA utama lewat catatan
     v = v.replace("Balas chat ini aja ya Kak buat booking 🙏", "Yuk booking sekarang 🙏");
-    if (v.indexOf(OLD_DEFAULT_BODY) !== -1) v = "";
+    if (OLD_DEFAULTS.some(function(o) { return v.indexOf(o) !== -1; })) v = "";
     return v || DEFAULT_TEXT;
   }
 
