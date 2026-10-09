@@ -110,6 +110,12 @@ async function refreshCustomers() {
       const p = normalizePhone((child.val() || {}).nomorPenyewa);
       if (p) set_.add(p);
     });
+    // nomor pelanggan lama yang ditambah manual dari panel (menu Promo)
+    const manual = await get(ref(db, "waContacts"));
+    manual.forEach(function(child) {
+      const p = normalizePhone(child.key);
+      if (p) set_.add(p);
+    });
     knownCustomers = set_;
   } catch (e) {
     log("Gagal ambil daftar pelanggan:", e.message);

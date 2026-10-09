@@ -6,6 +6,8 @@
      gambar disimpan sekali di waBroadcastMedia/{broadcastId}
    - Bot mengirim pelan-pelan (jeda acak) dengan batas per hari,
      sisanya otomatis dilanjut hari berikutnya.
+   - Nomor pelanggan lama bisa ditambah manual: waContacts/{nomor}
+     (ikut masuk daftar "pernah sewa", dan bot boleh mengirim ke nomor ini)
    - Pelanggan yang membalas STOP tercatat di waOptOut/{nomor}
      dan tidak akan dikirimi lagi.
 ===================================================== */
@@ -28,6 +30,8 @@
 
   let started = false;
   let optOut = {};
+  let contacts = {};        // nomor pelanggan lama yang ditambah manual
+  let contactsLoaded = false;
   let outbox = [];          // isi waOutbox 30 hari terakhir (tanpa gambar)
   let broadcasts = [];
   let botStatus = null;
@@ -108,6 +112,15 @@
       }
     });
 
+    Object.keys(contacts).forEach(function(p) {
+      const k = contacts[p] || {};
+      const c = map[p] || (map[p] = { phone: p, name: "", count: 0, lastAt: 0 });
+      c.manual = true;
+      if (!c.name && k.name) c.name = k.name;
+      const t = Number(k.lastSewa || 0);
+      if (t > c.lastAt) c.lastAt = t;
+    });
+
     const lastFu = {};
     outbox.forEach(function(m) {
       if (m.source !== "followup" || m.status !== "sent") return;
@@ -124,6 +137,84 @@
     }).sort(function(a, b) { return b.lastAt - a.lastAt; });
   }
 
+  /* ---------- tambah nomor manual ---------- */
+  function parseNumbers(raw) {
+    const out = [];
+    const bad = [];
+    String(raw || "").split(/[\n,;]+/).forEach(function(line) {
+      line = line.trim();
+      if (!line) return;
+      const phone = normalizePhone(line);
+      if (!phone) { bad.push(line); return; }
+      const name = line.replace(/[+\d\s\-‐-―.()]+/, " ").replace(/[()]/g, "").trim();
+      out.push({ phone: phone, name: name });
+    });
+    return { list: out, bad: bad };
+  }
+
+  function addContacts() {
+    const input = $id("fuManualNumbers");
+    const result = $id("fuManualResult");
+    const parsed = parseNumbers(input.value);
+    if (!parsed.list.length) {
+      result.textContent = parsed.bad.length ? "Nomor tidak terbaca. Contoh: 0812 3456 7890 Budi" : "Isi nomor dulu.";
+      return;
+    }
+
+    const dateVal = ($id("fuManualDate") || {}).value || "";
+    const lastSewa = dateVal ? Date.parse(dateVal + "T12:00:00+07:00") : 0;
+    const known = {};
+    customers().forEach(function(c) { known[c.phone] = true; });
+
+    const updates = {};
+    let baru = 0;
+    let ada = 0;
+    const seen = {};
+    parsed.list.forEach(function(it) {
+      if (seen[it.phone]) return;
+      seen[it.phone] = true;
+      const old = contacts[it.phone];
+      if (known[it.phone]) {
+        ada += 1;
+        if (!old) return;   // sudah tercatat dari data sewa, tidak perlu disimpan lagi
+      } else {
+        baru += 1;
+      }
+      const rec = { addedAt: Date.now(), addedBy: role() };
+      if (it.name) rec.name = it.name.slice(0, 60);
+      if (lastSewa) rec.lastSewa = lastSewa;
+      if (old) {
+        if (it.name) updates["waContacts/" + it.phone + "/name"] = rec.name;
+        if (lastSewa) updates["waContacts/" + it.phone + "/lastSewa"] = lastSewa;
+      } else {
+        updates["waContacts/" + it.phone] = rec;
+      }
+    });
+
+    if (!Object.keys(updates).length) {
+      result.textContent = "Semua nomor sudah ada di daftar" + (parsed.bad.length ? ", " + parsed.bad.length + " tidak terbaca" : "") + ".";
+      return;
+    }
+
+    db.ref().update(updates).then(function() {
+      Object.keys(seen).forEach(function(p) { selected[p] = true; });
+      input.value = "";
+      result.textContent = baru + " nomor baru ditambahkan" + (ada ? ", " + ada + " sudah ada" : "") +
+        (parsed.bad.length ? ", " + parsed.bad.length + " tidak terbaca" : "") + ".";
+      renderList();
+    }).catch(function(e) {
+      result.textContent = "Gagal simpan: " + e.message;
+    });
+  }
+
+  function removeContact(phone) {
+    const c = contacts[phone];
+    if (!c) return;
+    if (!confirm("Hapus " + prettyPhone(phone) + " dari daftar nomor manual?")) return;
+    delete selected[phone];
+    db.ref("waContacts/" + phone).remove().catch(function(e) { alert("Gagal hapus: " + e.message); });
+  }
+
   function filterSettings() {
     return {
       minDays: Number(($id("fuFilterDays") || {}).value || 0),
@@ -134,7 +225,7 @@
 
   function eligible(c, f) {
     if (c.optOut) return false;
-    if (f.minDays && Date.now() - c.lastAt < f.minDays * DAY) return false;
+    if (f.minDays && c.lastAt && Date.now() - c.lastAt < f.minDays * DAY) return false;
     if (f.skipRecent && c.lastFollowup && Date.now() - c.lastFollowup < 7 * DAY) return false;
     return true;
   }
@@ -266,7 +357,7 @@
     if (!selectionInit) {
       let ada = false;
       try { ada = Array.isArray(allRentals) && allRentals.length > 0; } catch (e) {}
-      if (ada) { selectAllEligible(); selectionInit = true; }
+      if (ada && contactsLoaded) { selectAllEligible(); selectionInit = true; }
     }
 
     const f = filterSettings();
@@ -289,13 +380,16 @@
       listEl.innerHTML = rows.map(function(c) {
         const ok = eligible(c, f);
         const badges = [];
+        if (c.manual && !c.count) badges.push('<span class="fu-badge manual">manual</span>' +
+          '<button type="button" class="fu-del" data-fu-del="' + c.phone + '" title="Hapus nomor"><i class="fas fa-xmark"></i></button>');
         if (c.optOut) badges.push('<span class="fu-badge stop">STOP</span>');
         else if (c.lastFollowup) badges.push('<span class="fu-badge">di-follow-up ' + daysAgo(c.lastFollowup) + "</span>");
         return '<label class="fu-row' + (ok ? "" : " off") + '">' +
           '<input type="checkbox" data-fu-phone="' + c.phone + '"' + (selected[c.phone] && ok ? " checked" : "") + (ok ? "" : " disabled") + ">" +
           '<span class="fu-row-main">' +
             "<strong>" + esc(c.name || prettyPhone(c.phone)) + "</strong>" +
-            "<span>" + esc(prettyPhone(c.phone)) + " · " + c.count + "x sewa · terakhir " + daysAgo(c.lastAt) + "</span>" +
+            "<span>" + esc(prettyPhone(c.phone)) + " · " +
+              (c.count ? c.count + "x sewa" : "pelanggan lama") + " · terakhir " + (c.lastAt ? daysAgo(c.lastAt) : "tidak tercatat") + "</span>" +
           "</span>" + badges.join("") +
         "</label>";
       }).join("");
@@ -461,6 +555,12 @@
       renderSendButton();
     });
 
+    db.ref("waContacts").on("value", function(snap) {
+      contacts = snap.val() || {};
+      contactsLoaded = true;
+      renderList();
+    });
+
     db.ref("waOptOut").on("value", function(snap) {
       optOut = snap.val() || {};
       renderList();
@@ -546,6 +646,15 @@
 
     $id("fuSelectAll").addEventListener("click", function() { selectAllEligible(); renderList(); });
     $id("fuSelectNone").addEventListener("click", function() { selected = {}; renderList(); });
+
+    $id("fuManualAdd").addEventListener("click", addContacts);
+
+    $id("fuList").addEventListener("click", function(e) {
+      const del = e.target.closest && e.target.closest("[data-fu-del]");
+      if (!del) return;
+      e.preventDefault();
+      removeContact(del.getAttribute("data-fu-del"));
+    });
 
     $id("fuList").addEventListener("change", function(e) {
       const phone = e.target.getAttribute && e.target.getAttribute("data-fu-phone");

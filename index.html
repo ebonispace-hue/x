@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://ggyu-66f09-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -798,6 +798,22 @@
 
       <section class="history-card">
         <div class="card-title-row">
+          <h3><i class="fas fa-user-plus"></i> Tambah Nomor Pelanggan Lama</h3>
+        </div>
+        <p class="card-subtext">Untuk pelanggan yang pernah sewa tapi belum tercatat di panel. Bisa banyak sekaligus, satu nomor per baris, boleh ditambah nama (nama hanya tampil di panel, tidak dipakai di pesan).</p>
+        <div class="fu-manual">
+          <textarea id="fuManualNumbers" rows="4" placeholder="0812 3456 7890 Budi&#10;0857-1111-2222"></textarea>
+          <div class="fu-manual-side">
+            <label for="fuManualDate">Terakhir sewa (opsional)</label>
+            <input type="date" id="fuManualDate">
+            <button type="button" id="fuManualAdd" class="btn-secondary"><i class="fas fa-plus"></i> Simpan ke daftar</button>
+          </div>
+        </div>
+        <p id="fuManualResult" class="card-subtext"></p>
+      </section>
+
+      <section class="history-card">
+        <div class="card-title-row">
           <h3><i class="fas fa-users"></i> Penerima</h3>
           <input type="search" id="fuSearch" class="loyalty-search" placeholder="Cari nama / nomor">
         </div>
@@ -1204,7 +1220,7 @@
 <script src="fx.js?v=1"></script>
 <script src="nav.js?v=2"></script>
 <script src="loyalty.js?v=7"></script>
-<script src="followup.js?v=2"></script>
+<script src="followup.js?v=3"></script>
 
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
