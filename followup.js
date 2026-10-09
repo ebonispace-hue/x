@@ -20,12 +20,16 @@
   const STOP_FOOTER = "\n_Balas STOP kalau tidak mau menerima info promo lagi._";
   const DEFAULT_TEXT = [
     "Halo Kak 👋",
-    "Lama nggak main PS bareng *Eboni Space* nih 🎮",
+    "Ada promo seru dari *Eboni Space* nih 🎮🔥",
     "",
-    "Weekend ini mau sewa PS4 lagi? Antar-jemput gratis sampai rumah, tinggal colok dan main.",
+    "🎁 *Level Up Rewards*: setiap total sewa 72 jam, dapat *GRATIS 6 jam* main. Semua durasi sewa dihitung!",
+    "🕹️ *Mabar Puas 200rb*: langsung dihitung 48 jam, tinggal sedikit lagi dapat jam gratis",
+    "🚚 Antar-jemput *GRATIS* sampai rumah (radius 7 km Cileungsi & Gunung Putri), tinggal colok dan main",
     "",
     "Yuk booking sekarang 🙏"
   ].join("\n");
+  // contoh pesan lama: kalau draf masih sama persis, otomatis diganti contoh baru
+  const OLD_DEFAULT_BODY = "Lama nggak main PS bareng *Eboni Space* nih 🎮\n\nWeekend ini mau sewa PS4 lagi? Antar-jemput gratis sampai rumah, tinggal colok dan main.";
   const DAY = 24 * 3600 * 1000;
   const IMG_MAX_SIDE = 1280;
   const IMG_MAX_BYTES = 450 * 1024;
@@ -295,6 +299,7 @@
     try { v = localStorage.getItem(DRAFT_KEY) || ""; } catch (e) {}
     // draf lama mengajak membalas ke nomor bot; arahkan ke WA utama lewat catatan
     v = v.replace("Balas chat ini aja ya Kak buat booking 🙏", "Yuk booking sekarang 🙏");
+    if (v.indexOf(OLD_DEFAULT_BODY) !== -1) v = "";
     return v || DEFAULT_TEXT;
   }
 
