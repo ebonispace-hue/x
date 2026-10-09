@@ -2833,3 +2833,5 @@ img.foto-thumb { cursor: zoom-in; }
 @media (max-width: 720px) {
   .fu-manual { grid-template-columns: 1fr; }
 }
+
+.fu-hist-why { margin: 8px 0 0; color: var(--rose); font-size: 12px; line-height: 1.5; }

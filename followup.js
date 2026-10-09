@@ -432,10 +432,16 @@
     const stats = {};
     outbox.forEach(function(m) {
       if (!m.broadcastId) return;
-      const s = stats[m.broadcastId] || (stats[m.broadcastId] = { sent: 0, failed: 0, pending: 0, cancelled: 0, pendingIds: [] });
+      const s = stats[m.broadcastId] || (stats[m.broadcastId] = { sent: 0, failed: 0, pending: 0, cancelled: 0, pendingIds: [], failedItems: [], reasons: {} });
       if (m.status === "sent") s.sent += 1;
-      else if (m.status === "failed") s.failed += 1;
+      else if (m.status === "failed") {
+        s.failed += 1;
+        s.failedItems.push(m);
+        const why = String(m.error || "tidak diketahui");
+        s.reasons[why] = (s.reasons[why] || 0) + 1;
+      }
       else if (m.status === "cancelled") s.cancelled += 1;
+      else if (m.status === "retried") { /* diganti pesan baru */ }
       else { s.pending += 1; if (m.status === "pending") s.pendingIds.push(m.id); }
     });
 
@@ -445,7 +451,8 @@
     }
 
     el.innerHTML = broadcasts.map(function(b) {
-      const s = stats[b.id] || { sent: 0, failed: 0, pending: 0, cancelled: 0, pendingIds: [] };
+      const s = stats[b.id] || { sent: 0, failed: 0, pending: 0, cancelled: 0, pendingIds: [], failedItems: [], reasons: {} };
+      const reasons = Object.keys(s.reasons).map(function(r) { return esc(r) + (s.reasons[r] > 1 ? " (" + s.reasons[r] + ")" : ""); }).join(", ");
       const when = new Date(Number(b.createdAt || 0)).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
       const firstLine = String(b.text || "").split("\n").filter(Boolean).slice(0, 2).join(" · ");
       return '<div class="fu-hist">' +
@@ -459,7 +466,9 @@
           '<span class="bad"><i class="fas fa-xmark"></i> ' + s.failed + " gagal</span>" +
           (s.cancelled ? "<span>" + s.cancelled + " dibatalkan</span>" : "") +
           (s.pendingIds.length ? '<button type="button" class="btn-mini" data-fu-cancel="' + b.id + '">Batalkan sisa</button>' : "") +
+          (s.failedItems.length ? '<button type="button" class="btn-mini" data-fu-retry="' + b.id + '"><i class="fas fa-rotate-right"></i> Kirim ulang yang gagal</button>' : "") +
         "</div>" +
+        (reasons ? '<p class="fu-hist-why">Alasan gagal: ' + reasons + "</p>" : "") +
       "</div>";
     }).join("");
 
@@ -527,6 +536,34 @@
       sending = false;
       renderSendButton();
     });
+  }
+
+  function retryFailed(bid) {
+    const el = $id("fuHistory");
+    const s = el && el.__stats && el.__stats[bid];
+    if (!s || !s.failedItems.length) return;
+    if (!botOnline()) { alert("Bot WA sedang offline."); return; }
+    if (!confirm("Kirim ulang " + s.failedItems.length + " pesan yang gagal?")) return;
+    const now = Date.now();
+    const updates = {};
+    s.failedItems.forEach(function(m, i) {
+      updates["waOutbox/" + m.id + "/status"] = "retried";
+      const key = db.ref("waOutbox").push().key;
+      updates["waOutbox/" + key] = {
+        phone: m.phone,
+        text: m.text,
+        source: "followup",
+        broadcastId: bid,
+        hasImage: !!m.hasImage,
+        status: "pending",
+        klik: true,
+        createdAt: now + i,
+        createdBy: role()
+      };
+    });
+    db.ref().update(updates).then(function() {
+      toast("Pesan yang gagal masuk antrian lagi.");
+    }).catch(function(e) { alert("Gagal kirim ulang: " + e.message); });
   }
 
   function cancelBroadcast(bid) {
@@ -669,6 +706,8 @@
     $id("fuHistory").addEventListener("click", function(e) {
       const btn = e.target.closest && e.target.closest("[data-fu-cancel]");
       if (btn) cancelBroadcast(btn.getAttribute("data-fu-cancel"));
+      const retry = e.target.closest && e.target.closest("[data-fu-retry]");
+      if (retry) retryFailed(retry.getAttribute("data-fu-retry"));
     });
 
     renderImageBox();
