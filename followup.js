@@ -234,6 +234,7 @@
 
   function eligible(c, f) {
     if (c.optOut) return false;
+    if (c.manual && !c.count) return true;   // nomor manual (untuk tes): bisa dikirimi kapan saja
     if (f.minDays && c.lastAt && Date.now() - c.lastAt < f.minDays * DAY) return false;
     if (f.skipRecent && c.lastFollowup && Date.now() - c.lastFollowup < 7 * DAY) return false;
     return true;
