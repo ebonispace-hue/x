@@ -139,6 +139,14 @@ async function heartbeat() {
 }
 
 /* ---------- koneksi WhatsApp ---------- */
+let startTimer = null;
+function jadwalStart(ms) {
+  clearTimeout(startTimer);
+  startTimer = setTimeout(function() {
+    startWhatsApp().catch(function(e) { log("Gagal start WhatsApp:", e.message); jadwalStart(10000); });
+  }, ms);
+}
+
 async function startWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion().catch(function() { return { version: undefined }; });
@@ -179,6 +187,8 @@ async function startWhatsApp() {
   }
 
   sock.ev.on("connection.update", function(u) {
+    if (sock !== thisSock) return;   // event dari koneksi lama, abaikan
+
     // minta kode pairing sekali per koneksi, setelah koneksi ke WhatsApp siap
     if (u.qr && BOT_NUMBER && !state.creds.registered && !pairingRequested) {
       mintaKodePairing();
@@ -202,17 +212,29 @@ async function startWhatsApp() {
 
     if (u.connection === "close") {
       connected = false;
+      pairingCode = "";
       heartbeat();
+      // lepas semua listener koneksi lama supaya tidak menimpa file login yang baru
+      try { thisSock.ev.removeAllListeners(); } catch (e) {}
+      try { thisSock.end(undefined); } catch (e) {}
+
       const code = u.lastDisconnect && u.lastDisconnect.error &&
         u.lastDisconnect.error.output && u.lastDisconnect.error.output.statusCode;
+      const registered = !!state.creds.registered;
 
-      if (code === DisconnectReason.loggedOut) {
-        log("Logout dari WhatsApp. Hapus folder auth & scan QR ulang.");
+      if (!registered) {
+        log("Kode pairing belum dipakai / kedaluwarsa (kode " + code + "). Minta kode baru 8 detik lagi...");
+        if (code === DisconnectReason.loggedOut) {
+          try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch (e) {}
+        }
+        jadwalStart(8000);
+      } else if (code === DisconnectReason.loggedOut) {
+        log("Logout dari WhatsApp. Hapus folder auth & tautkan ulang.");
         try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch (e) {}
-        setTimeout(startWhatsApp, 3000);
+        jadwalStart(3000);
       } else {
         log("Koneksi terputus (kode " + code + "), sambung ulang 5 detik lagi...");
-        setTimeout(startWhatsApp, 5000);
+        jadwalStart(5000);
       }
     }
   });
@@ -479,6 +501,22 @@ const server = http.createServer(async function(req, res) {
 });
 
 /* ---------- mulai ---------- */
+// cegah bot jalan dobel di folder yang sama (kode pairing jadi saling menggugurkan)
+const LOCK_FILE = path.join(__dirname, ".bot.lock");
+try {
+  const oldPid = Number(fs.readFileSync(LOCK_FILE, "utf8"));
+  if (oldPid && oldPid !== process.pid) {
+    process.kill(oldPid, 0);   // melempar error kalau proses itu sudah tidak ada
+    console.error("Bot sudah jalan (PID " + oldPid + "). Matikan dulu yang lama, jangan jalankan dobel.");
+    process.exit(1);
+  }
+} catch (e) { /* tidak ada bot lain */ }
+fs.writeFileSync(LOCK_FILE, String(process.pid));
+process.on("exit", function() {
+  try { if (Number(fs.readFileSync(LOCK_FILE, "utf8")) === process.pid) fs.unlinkSync(LOCK_FILE); } catch (e) {}
+});
+["SIGINT", "SIGTERM"].forEach(function(sig) { process.on(sig, function() { process.exit(0); }); });
+
 server.listen(PORT, function() {
   log("Server bot jalan di port", PORT);
 });
